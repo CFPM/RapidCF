@@ -12,7 +12,8 @@ component {
 		}else if(Find("_own",arguments.MissingMethodName)){
 			var component = Replace(arguments.MissingMethodName,"_own","");
 			var referenceKey = len(trim(arguments.MissingMethodArguments[1])) ? arguments.MissingMethodArguments[1] : "";
-			return _own(component,referenceKey);
+			var referenceColumn = len(trim(arguments.MissingMethodArguments[2])) ? arguments.MissingMethodArguments[2] : "";
+			return _own(component,referenceKey,referenceColumn);
 		}else{
 			throw (message="Missing Method", type="error");
 		}
@@ -21,15 +22,17 @@ component {
 		var output = {};
 		for(key in variables){
 			if(key != "THIS" && !isFunction(key)){
-				if(IsInstanceOf(variables[key],"BaseEntity")){
+				if(IsInstanceOf(variables[key],"rb") || IsInstanceOf(variables[key],"#this.componentName#")){
 					output[key] = variables[key]._export();
-				}else if(isArray(variables[key]) && IsInstanceOf(variables[key][1],"BaseEntity")){
+				}else if(isArray(variables[key]) && ( IsInstanceOf(variables[key][1],"rb") || IsInstanceOf(variables[key],"#this.componentName#"))){
 					output[key] = arrayNew(1);
 					for(var i = 1; i <= arrayLen(variables[key]); i++){
 						output[key][i] = variables[key][i]._export();
 					}
 				}else{
-					output[key] = variables[key];
+					if(key != "KEY"){
+						output[key] = variables[key];
+					}
 				}
 			}
 		}
@@ -38,7 +41,7 @@ component {
 
 	public function _import(data){
 		for(key in data){
-			variables[key] = data;
+			variables[key] = data[key];
 		}
 	}
 
@@ -59,9 +62,13 @@ component {
 		return this;
 	}
 
-	private function _own(component,referenceKey=""){
+	private function _own(component,referenceKey="",referenceColumn=""){
 		if(len(trim(referenceKey))){
-			var referenceKeyID = variables[arguments.component & arguments.referenceKey];
+			if(len(trim(referenceColumn))){
+				var referenceKeyID = variables[arguments.referenceColumn];
+			}else{
+				var referenceKeyID = variables[arguments.component & arguments.referenceKey];
+			}
 		}else{
 			referenceKey = this.componentName & this.primaryKey;
 			var referenceKeyID = variables[this.primaryKey];

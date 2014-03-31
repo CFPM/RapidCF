@@ -12,7 +12,7 @@ component {
 		try{
 			var object = new "#componentName#"();
 		}catch(any e){
-			var object = new rb();		
+			var object = new rbEntity();		
 		}		
 		
 		try{
@@ -58,13 +58,13 @@ component {
 		var primaryKey = arguments.object.primaryKey;
 		var primaryKeyValue = Evaluate("object.get#primaryKey#()");
 		if(len(trim(primaryKey))){
-			transaction{
+			// transaction{
 				if(len(trim(primaryKeyValue))){
 					return update(arguments.object);
 				}else{
 					return create(arguments.object);
 				}
-			}
+			// }
 		}else{
 			return false;
 		}
@@ -86,7 +86,7 @@ component {
 				var queryService = new query();
 				queryService.setDatasource(variables.dataSource); 
 				queryService.setName(arguments.object.componentName);
-				results = queryService.execute(sql="DELETE FROM #arguments.object.componentName# WHERE [#primaryKey#] = '#primaryKeyValue#'"); 
+				results = queryService.execute(sql="DELETE FROM [#arguments.object.componentName#] WHERE [#primaryKey#] = '#primaryKeyValue#'"); 
 			}
 		}
 	}
@@ -135,54 +135,58 @@ component {
 /////* Private functions *////////////////////////////////////////////////////////////////////
 
 	private function create(object){
-		var primaryKey = arguments.object.primaryKey;
-		var columns = arguments.object.tableColumns;
 		var queryService = new query();
 		queryService.setDatasource(variables.dataSource); 
 		queryService.setName(arguments.object.componentName);
+
 		var columnsList = "";
 		var valuesList = "";
-		for(var i = 1; i <= ArrayLen(columns); i++){
-			var columnName = columns[i];
-			var value = Evaluate("arguments.object.get#columnName#()");
-			if(len(trim(value))){
+		
+		var data = arguments.object._export();
+		
+		for(var i = 1; i <= ArrayLen(arguments.object.tableColumns); i++){
+			var columnName = arguments.object.tableColumns[i];
+
+			if(structKeyExists(data,"#columnName#")){
+				queryService.addParam(value=data[columnName]);
 				columnsList = listAppend(columnsList,"[#columnName#]");
-				valuesList = listAppend(valuesList, "'#value#'");
-			}			
+				valuesList = listAppend(valuesList, " ? ");
+			}
 		}
-		results = queryService.execute(sql="INSERT INTO #arguments.object.componentName# (#columnsList#) OUTPUT inserted.#primaryKey# VALUES (#valuesList#)");
+		results = queryService.execute(sql="INSERT INTO [#arguments.object.componentName#] (#columnsList#) OUTPUT inserted.#arguments.object.primaryKey# VALUES (#valuesList#)");
 		var records = results.getResult();
-		return records[primaryKey][1];
+		variables[arguments.object.primaryKey] = records[arguments.object.primaryKey][1];
 	}
 
 	private function update(object){
-		var primaryKey = arguments.object.primaryKey;
-		var primaryKeyValue = Evaluate("object.get#primaryKey#()");
-		var columns = arguments.object.tableColumns;
 		var queryService = new query();
 		queryService.setDatasource(variables.dataSource); 
 		queryService.setName(arguments.object.componentName);
+		
 		var updateList = "";
-		for(var i = 1; i <= ArrayLen(columns); i++){
-			var columnName = columns[i];
-			var value = Evaluate("arguments.object.get#columnName#()");
-			if(len(trim(value)) && columnName != primaryKey){
-				updateList = listAppend(updateList,"[#columnName#]='#value#'");
+
+		var data = arguments.object._export();
+		for(var i = 1; i <= ArrayLen(arguments.object.tableColumns); i++){
+			var columnName = arguments.object.tableColumns[i];
+			if(structKeyExists(data,"#columnName#") && columnName != arguments.object.primaryKey){
+				queryService.addParam(name=columnName,value=data[columnName]);
+				updateList = listAppend(updateList," [#columnName#] = :#columnName# ");
 			}			
 		}
-		results = queryService.execute(sql="UPDATE #arguments.object.componentName# SET #updateList# WHERE [#primaryKey#] = '#primaryKeyValue#'");
+		var primaryKeyValue = data[arguments.object.primaryKey];
+		results = queryService.execute(sql="UPDATE [#arguments.object.componentName#] SET #updateList# WHERE [#arguments.object.primaryKey#] = '#primaryKeyValue#'");
+	}	
 
-		return primaryKeyValue;
-	}
-
-	private function whereQuery(componentName, where, values){
+	private function whereQuery(componentName, where="", values){
+		if(!len(trim(where)))
+			where = "1=1";
 		var queryService = new query();
 		queryService.setDatasource(variables.dataSource); 
 		queryService.setName(arguments.componentName);
 		for(var i = 1; i <= ArrayLen(arguments.values); i++){
 			queryService.addParam(value=arguments.values[i]);
 		}
-		results = queryService.execute(sql="SELECT * FROM #arguments.componentName# WHERE #arguments.where#"); 
+		results = queryService.execute(sql="SELECT * FROM [#arguments.componentName#] WHERE #arguments.where#"); 
 		return results.getResult();
 	}
 

@@ -169,12 +169,12 @@ Example:
 			lastFirstName = user.lastFirstName();
 		}
 
-####ownComponentName
+####_ownComponentName
 Description: Loads all children objects of componentName based on primaryKey and primaryKeyID or loads all parent or horizontal relationship components when passed relationship key
 Example:
 
 	//Get Children
-	var messages = user.ownMessages();
+	var messages = user._ownMessages();
 
 	//Get Parent
 	//This assumes that the current object/record has the parent name + ID ('UserID') in it's records.

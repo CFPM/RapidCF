@@ -1,0 +1,221 @@
+component {
+
+	property name="rb" inject="model" scope="variables";
+
+	function init() {
+		return this;
+	}
+
+	function createTables(){
+		queryService = new query();
+		queryService.setDatasource(variables.dataSource);
+		result = queryService.execute(sql="
+			IF object_id('[user]') IS NOT NULL
+				DROP TABLE [user]
+
+			CREATE TABLE [user](
+				[id] [int] IDENTITY(1,1) NOT NULL,
+				[firstName] [varchar](50) NOT NULL,
+				[lastName] [varchar](50) NOT NULL,
+				[email] [varchar](50) NULL,
+			CONSTRAINT [PK_contacts] PRIMARY KEY CLUSTERED 
+			(
+				[id] ASC
+			)WITH (PAD_INDEX  = OFF, STATISTICS_NORECOMPUTE  = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS  = ON, ALLOW_PAGE_LOCKS  = ON) ON [PRIMARY]
+			) ON [PRIMARY]
+
+		");
+		result = queryService.execute(sql="
+			IF object_id('[message]') IS NOT NULL
+				DROP TABLE [message]
+
+			CREATE TABLE [message](
+				[id] [int] IDENTITY(1,1) NOT NULL,
+				[userID] [int] NOT NULL,
+				[userIDCreator] [int] NOT NULL,
+				[text] [varchar](max) NULL,
+			CONSTRAINT [PK_messages] PRIMARY KEY CLUSTERED 
+			(
+				[id] ASC
+			)WITH (PAD_INDEX  = OFF, STATISTICS_NORECOMPUTE  = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS  = ON, ALLOW_PAGE_LOCKS  = ON) ON [PRIMARY]
+			) ON [PRIMARY]
+		");
+	}
+
+	function setupORM(){
+		variables.ORM = new rb();
+		variables.ORM.setup(variables.dataSource);
+	}
+
+	function tearDown(){
+		queryService = new query();
+		queryService.setDatasource(variables.dataSource);
+		result = queryService.execute(sql="
+			IF object_id('[user]') IS NOT NULL
+				DROP TABLE [user]
+		");
+		result = queryService.execute(sql="
+			IF object_id('[message]') IS NOT NULL
+				DROP TABLE [message]
+		");		
+	}
+
+	function startTests(dataSource){
+		
+		variables.dataSource = arguments.dataSource;
+
+		setupORM();
+		createTables();
+		
+		createUsers();
+		testUserCreation();
+		
+		editUsers();
+		testUserEdit();
+
+		deleteUsers();
+		testUserDeletion();
+
+		createUsers();
+		createMessages();
+
+		// testFindAll();
+
+		testOneToMany();
+		testManyToMany();
+
+		tearDown();
+
+		writeDump("Tests were successful");
+	}
+
+
+	function createUsers(){
+		var user1 = variables.ORM.dispense("user");
+		var user2 = variables.ORM.dispense("user");
+
+		//Lets test our setters and chaining
+		user1.setFirstName("John").setLastName("Doe").setEmail("john.doe@gmail.com");
+		variables.ORM.store(user1);
+		
+
+		//Lets test our importing
+		var user2Struct = {
+			firstName = "Jane",
+			lastName = "Doe",
+			email = "jane.doe@gmail.com"
+		};
+		user2._import(user2Struct);
+		variables.ORM.store(user2);
+
+	}
+
+	function createMessages(){
+		var user1 = variables.ORM.find("user","firstName = ? AND lastName = ?",["John","Doe"]);
+		var user2 = variables.ORM.find("user","firstName = ? AND lastName = ?",["Jane","Doe"]);
+
+		var message = variables.ORM.dispense("message");
+		message.setText("Hello John Doe").setUserID(user1.getID()).setUserIDCreator(user2.getID());
+		variables.ORM.store(message);
+
+		var message = variables.ORM.dispense("message");
+		message.setText("Hi Jane").setUserID(user2.getID()).setUserIDCreator(user1.getID());
+		variables.ORM.store(message);
+		
+		var message = variables.ORM.dispense("message");
+		message.setText("How are you?").setUserID(user1.getID()).setUserIDCreator(user2.getID());
+		variables.ORM.store(message);
+
+	}
+
+	function testUserCreation(){
+		queryService = new query();
+		queryService.setDatasource(variables.dataSource);
+		queryService.setName("user");
+		queryService.addParam(value="John",cfsqltype="cf_sql_varchar");
+		queryService.addParam(value="Doe",cfsqltype="cf_sql_varchar");
+		result = queryService.execute(sql="SELECT * FROM [user] WHERE firstName = ? AND lastName = ? ");
+		records = result.getResult();
+		if(records.recordCount != 1)
+			throw "ERROR: Failed to retrieve First User. rb.store() isn't working";
+
+		queryService = new query();
+		queryService.setDatasource(variables.dataSource);
+		queryService.setName("user");
+		queryService.addParam(value="Jane",cfsqltype="cf_sql_varchar");
+		queryService.addParam(value="Doe",cfsqltype="cf_sql_varchar");
+		result = queryService.execute(sql="SELECT * FROM [user] WHERE firstName = ? AND lastName = ? ");
+		records = result.getResult();
+		if(records.recordCount != 1)
+			throw "ERROR: Failed to retrieve First User. rb.store() isn't working";
+		
+	}
+
+	function editUsers(){
+		var user = variables.ORM.find("user","firstName = ? AND lastName = ?",["John","Doe"]);
+		user.setEmail("john.doe@yahoo.com");
+		variables.ORM.store(user);
+	}
+	
+	function testUserEdit(){
+		queryService = new query();
+		queryService.setDatasource(variables.dataSource);
+		queryService.setName("user");
+		queryService.addParam(value="John",cfsqltype="cf_sql_varchar");
+		queryService.addParam(value="Doe",cfsqltype="cf_sql_varchar");
+		result = queryService.execute(sql="SELECT * FROM [user] WHERE firstName = ? AND lastName = ? ");
+		records = result.getResult();
+		if(records.recordCount != 1)
+			throw "ERROR: Failed to retrieve First User. User isn't in table";
+
+		if(records.email[1] != "john.doe@yahoo.com")
+			throw "ERROR: Failed to update First User. rb.store() isn't working";
+	}
+
+	function deleteUsers(){
+		var user1 = variables.ORM.find("user","firstName = ? AND lastName = ?",["John","Doe"]);
+		variables.ORM.trash(user1);
+		var user2 = variables.ORM.find("user","firstName = ? AND lastName = ?",["Jane","Doe"]);
+		variables.ORM.trash(user2);
+	}
+
+	function testUserDeletion(){
+		queryService = new query();
+		queryService.setDatasource(variables.dataSource);
+		queryService.setName("user");
+		result = queryService.execute(sql="SELECT * FROM [user]");
+		records = result.getResult();
+		if(records.recordCount != 0)
+			throw "ERROR: Failed to delete users";
+	}
+
+	function testFindAll(){
+		var users = variables.ORM.findAll("user");
+		if(arrayLen(users) != 2)
+			throw "ERROR: Failed to find all users";
+	}
+
+	function testOneToMany(){
+		var user = variables.ORM.find("user","firstName = ? AND lastName = ?",["John","Doe"]);
+		var userMessages = user._ownMessage();
+
+		if(arrayLen(userMessages)!=2)
+			throw "ERROR: Failed to grab all messages of one user";
+	}
+
+	function testManyToMany(){
+		var user = variables.ORM.find("user","firstName = ? AND lastName = ?",["John","Doe"]);
+		var userCreated = variables.ORM.find("user","firstName = ? AND lastName = ?",["Jane","Doe"]);
+		var message = variables.ORM.find("message","userID = ?",[user.getID()]);
+
+		var messageUser = message._ownUser("ID");
+		var messageUserCreated = message._ownUser("ID","userIDCreator");
+
+		if(messageUser[1].getID() != user.getID())
+			throw "ERROR: Did not get the correct user for lazy loading";
+
+		if(messageUserCreated[1].getID() != userCreated.getID())
+			throw "ERROR: Did not get the correct userCreated for lazy loading";
+	}
+
+}
