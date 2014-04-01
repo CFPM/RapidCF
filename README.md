@@ -1,5 +1,12 @@
 #ORMService Documention
 
+##Intro
+
+This is a ORM solution that is based on RedBeanPHP.  It assumes several standards (such as primary key's exist in tables) that are generally adhered to.
+
+Base requirements for running RedBeanCF
+* Microsoft SQL Datasource
+* ColdFusion 9.0.1
 
 ##Basic Usage
 There is a patch of the Interactive Interview that includes the usage of the ORMService for all CRUD operations.  If you would like the patch to test, you can contact William
@@ -187,9 +194,8 @@ Example:
 ###Prefetch
 Prefetch data using one SQL Query versus having the n+1 issue we have now.
 
-###Testing
-mockDatabase
-object - mockTable //Copies table from RUCECI_Master into mockDatabase
+###findAlll
+Dispense once, and then copy the rest of the time
 
-###Document
-chain setters
+###research DBinfo
+See how dbinfo() gets it's data and if it caches it

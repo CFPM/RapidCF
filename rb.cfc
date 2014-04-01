@@ -4,11 +4,11 @@ component {
 		return this;
 	}
 
-	public function setup(dataSource){
+	public function setup(required string dataSource){
 		variables.dataSource = arguments.dataSource;
 	}
 
-	public function dispense(componentName){
+	public function dispense(required string componentName){
 		try{
 			var object = new "#componentName#"();
 		}catch(any e){
@@ -28,22 +28,21 @@ component {
 		return object;
 	}
 
-	public function load(componentName,id){
+	public function load(required string componentName, required any ID){
 		var primaryKey = getPrimaryKey(componentName);
 		return this.find(arguments.componentName,"#primaryKey# = ? ",[id]);
 	}
 
-	public function find(componentName,where,values){
+	public function find(required string componentName,where,values){
 		var object = dispense(arguments.componentName);
 		var records = whereQuery(componentName, where, values);
 		if(records.recordcount > 0)
 			return populateObject(object,records);
 		else
 			return false;
-		return allObjects;
 	}
 
-	public function findAll(componentName,where,values){
+	public function findAll(required string componentName,required string where,required array values){
 		var records = whereQuery(componentName, where, values);
 		var allObjects = arrayNew(1);
 		for(var i = 1; i <= records.recordcount; i++){
@@ -54,31 +53,25 @@ component {
 		return allObjects;	
 	}
 
-	public function store(object){
+	public function store(required object){
 		var primaryKey = arguments.object.primaryKey;
 		var primaryKeyValue = Evaluate("object.get#primaryKey#()");
 		if(len(trim(primaryKey))){
-			// transaction{
-				if(len(trim(primaryKeyValue))){
-					return update(arguments.object);
-				}else{
-					return create(arguments.object);
-				}
-			// }
-		}else{
-			return false;
-		}
-	}
-
-	public void function storeAll(objects){
-		transaction{
-			for(var i = 1; i <= ArrayLen(objects); i ++){
-				store(objects[i]);
+			if(len(trim(primaryKeyValue))){
+				update(arguments.object);
+			}else{
+				create(arguments.object);
 			}
 		}
 	}
 
-	public void function trash(object){
+	public void function storeAll(required array objects){
+		for(var object in objects){
+			store(object);
+		}
+	}
+
+	public void function trash(required object){
 		var primaryKey = arguments.object.primaryKey;
 		if(len(trim(primaryKey))){
 			transaction{
@@ -91,42 +84,38 @@ component {
 		}
 	}
 
-	public function query(componentName, queryString){
-		transaction{
-			var results = queryThis(arguments.queryString);
-			var records = results.getResult();
+	public function query(required string componentName, required string queryString){
+		var results = queryThis(arguments.queryString);
+		var records = results.getResult();
+		var object = dispense(arguments.componentName);
+		return populateObject(object, records);
+	}
+
+	public function queryAll(required string componentName, required string queryString){
+		var results = queryThis(queryString);
+		var records = results.getResult();
+		var allObjects = arrayNew(1);
+		for(var i = 1; i <= records.recordcount; i++){
 			var object = dispense(arguments.componentName);
-			return populateObject(object, records);
+			object = populateObject(object, records, i);
+			arrayAppend(allObjects,object);
 		}
+		return allObjects;
 	}
 
-	public function queryAll(componentName, queryString){
-		transaction{
-			var results = queryThis(queryString);
-			var records = results.getResult();
-			var allObjects = arrayNew(1);
-			for(var i = 1; i <= records.recordcount; i++){
-				var object = dispense(arguments.componentName);
-				object = populateObject(object, records, i);
-				arrayAppend(allObjects,object);
-			}
-			return allObjects;
-		}
-	}
-
-	public function exportAll(objects){
+	public function exportAll(required array objects){
 		var exportArray = ArrayNew(1);
-		for(var i = 1; i <= ArrayLen(objects); i ++){
-			arrayAppend(exportArray,objects[i]._export());
+		for(var object in objects){
+			arrayAppend(exportArray,object._export());
 		}
 		return exportArray;
 	}
 
-	public function importAll(componentName,dataArray){
+	public function importAll(required string componentName, required array dataArray){
 		var objectArray = ArrayNew(1);
-		for(var i = 1; i <= ArrayLen(dataArray); i++){
+		for(var data in dataArray){
 			var object = dispense(arguments.componentName);
-			object._import(dataArray[i]);
+			object._import(data);
 			arrayAppend(objectArray,object);
 		}
 		return objectArray;
@@ -134,7 +123,7 @@ component {
 
 /////* Private functions *////////////////////////////////////////////////////////////////////
 
-	private function create(object){
+	private function create(required object){
 		var queryService = new query();
 		queryService.setDatasource(variables.dataSource); 
 		queryService.setName(arguments.object.componentName);
@@ -144,9 +133,7 @@ component {
 		
 		var data = arguments.object._export();
 		
-		for(var i = 1; i <= ArrayLen(arguments.object.tableColumns); i++){
-			var columnName = arguments.object.tableColumns[i];
-
+		for(var columnName in arguments.object.tableColumns){
 			if(structKeyExists(data,"#columnName#")){
 				queryService.addParam(value=data[columnName]);
 				columnsList = listAppend(columnsList,"[#columnName#]");
@@ -158,7 +145,7 @@ component {
 		variables[arguments.object.primaryKey] = records[arguments.object.primaryKey][1];
 	}
 
-	private function update(object){
+	private function update(required object){
 		var queryService = new query();
 		queryService.setDatasource(variables.dataSource); 
 		queryService.setName(arguments.object.componentName);
@@ -166,8 +153,7 @@ component {
 		var updateList = "";
 
 		var data = arguments.object._export();
-		for(var i = 1; i <= ArrayLen(arguments.object.tableColumns); i++){
-			var columnName = arguments.object.tableColumns[i];
+		for(var columnName in arguments.object.tableColumns){
 			if(structKeyExists(data,"#columnName#") && columnName != arguments.object.primaryKey){
 				queryService.addParam(name=columnName,value=data[columnName]);
 				updateList = listAppend(updateList," [#columnName#] = :#columnName# ");
@@ -177,20 +163,20 @@ component {
 		results = queryService.execute(sql="UPDATE [#arguments.object.componentName#] SET #updateList# WHERE [#arguments.object.primaryKey#] = '#primaryKeyValue#'");
 	}	
 
-	private function whereQuery(componentName, where="", values){
+	private function whereQuery(required string componentName, string where="", required array values){
 		if(!len(trim(where)))
 			where = "1=1";
 		var queryService = new query();
 		queryService.setDatasource(variables.dataSource); 
 		queryService.setName(arguments.componentName);
-		for(var i = 1; i <= ArrayLen(arguments.values); i++){
-			queryService.addParam(value=arguments.values[i]);
+		for(var value in values){
+			queryService.addParam(value=value);
 		}
 		results = queryService.execute(sql="SELECT * FROM [#arguments.componentName#] WHERE #arguments.where#"); 
 		return results.getResult();
 	}
 
-	private function populateObject(object, records, iterator = 1){
+	private function populateObject(required object, required records, required iterator = 1){
 		for(var i = 1; i <= ListLen(records.columnList); i++){
 			var column = ListGetAt(records.columnList,i);
 			var value = records[column][iterator];
@@ -200,12 +186,12 @@ component {
 		return object;
 	}
 
-	private function getTableInfo(componentName){
+	private function getTableInfo(required string componentName){
 		var dbschema = new dbinfo(datasource=variables.dataSource,table=arguments.componentName);
 		return dbschema;
 	}
 
-	private function getPrimaryKey(componentName){
+	private function getPrimaryKey(required string componentName){
 		var dbschema = getTableInfo(componentName);
 		var columns = dbschema.columns();
 		var primaryKey = "";
@@ -217,7 +203,7 @@ component {
 		return primaryKey;
 	}
 
-	private function getColumns(componentName){
+	private function getColumns(required string componentName){
 		var dbschema = getTableInfo(componentName);
 		var columns = dbschema.columns();
 		var columnArray = ArrayNew(1);
@@ -227,7 +213,7 @@ component {
 		return columnArray;
 	}
 
-	private function queryThis(queryString){
+	private function queryThis(required string queryString){
 		var queryService = new query();
 		queryService.setDatasource(variables.dataSource); 
 		var results = queryService.execute(sql=arguments.queryString); 
