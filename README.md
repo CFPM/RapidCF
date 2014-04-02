@@ -9,6 +9,9 @@ Base requirements for running RedBeanCF
 * Microsoft SQL Datasource
 * ColdFusion 9.0.1
 
+##Version
+v.0.1
+
 ##Licensce
 
 Licensed under MIT License
