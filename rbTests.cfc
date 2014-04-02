@@ -1,4 +1,10 @@
-component {
+/*
+ * Any changes should be made and pushed to here: https://github.com/Prefinem/RedBeanCF
+ * Author: William Giles
+ * License: MIT http://opensource.org/licenses/MIT
+ */
+
+ component {
 
 	property name="rb" inject="model" scope="variables";
 
@@ -79,8 +85,6 @@ component {
 		createUsers();
 		createMessages();
 
-		// testFindAll();
-
 		testOneToMany();
 		testManyToMany();
 
@@ -94,12 +98,9 @@ component {
 		var user1 = variables.ORM.dispense("user");
 		var user2 = variables.ORM.dispense("user");
 
-		//Lets test our setters and chaining
 		user1.setFirstName("John").setLastName("Doe").setEmail("john.doe@gmail.com");
 		variables.ORM.store(user1);
 		
-
-		//Lets test our importing
 		var user2Struct = {
 			firstName = "Jane",
 			lastName = "Doe",

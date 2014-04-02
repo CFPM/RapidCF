@@ -1,3 +1,9 @@
+/*
+ * Any changes should be made and pushed to here: https://github.com/Prefinem/RedBeanCF
+ * Author: William Giles
+ * License: MIT http://opensource.org/licenses/MIT
+ */
+
 component {
 
 	public function init(){
@@ -121,7 +127,9 @@ component {
 		return objectArray;
 	}
 
-/////* Private functions *////////////////////////////////////////////////////////////////////
+/*
+ * Private functions
+ */
 
 	private function create(required object){
 		var queryService = new query();
