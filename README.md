@@ -8,6 +8,11 @@ Base requirements for running RedBeanCF
 * Microsoft SQL Datasource
 * ColdFusion 9.0.1
 
+##Licensce
+
+Licensed under MIT License
+http://opensource.org/licenses/MIT
+
 ##Basic Usage
 There is a patch of the Interactive Interview that includes the usage of the ORMService for all CRUD operations.  If you would like the patch to test, you can contact William
 
