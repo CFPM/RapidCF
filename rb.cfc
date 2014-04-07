@@ -90,15 +90,15 @@ component {
 		}
 	}
 
-	public function query(required string componentName, required string queryString){
-		var results = queryThis(arguments.queryString);
+	public function query(required string componentName, required string queryString, array params = ArrayNew(1)){
+		var results = queryThis(arguments.queryString,params);
 		var records = results.getResult();
 		var object = dispense(arguments.componentName);
 		return populateObject(object, records);
 	}
 
-	public function queryAll(required string componentName, required string queryString){
-		var results = queryThis(queryString);
+	public function queryAll(required string componentName, required string queryString, array params = ArrayNew(1)){
+		var results = queryThis(queryString,params);
 		var records = results.getResult();
 		var allObjects = arrayNew(1);
 		for(var i = 1; i <= records.recordcount; i++){
@@ -221,9 +221,12 @@ component {
 		return columnArray;
 	}
 
-	private function queryThis(required string queryString){
+	private function queryThis(required string queryString, array params = ArrayNew(1)){
 		var queryService = new query();
 		queryService.setDatasource(variables.dataSource); 
+		for(param in params){
+			queryService.addParam(value=param);
+		}
 		var results = queryService.execute(sql=arguments.queryString); 
 		return results;
 	}

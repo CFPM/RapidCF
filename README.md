@@ -119,18 +119,20 @@ Example:
 	ORM.trash(user);
 
 ###query
-Accepts: Component Object, Query String
+Accepts: Component Object, Query String, Array of Params
 Returns: single object (first record) of query
 Example:
 
 	user = ORM.query("user","SELECT id,name FROM user ORDER BY name");
+	user = ORM.query("user","SELECT id,name FROM user WHERE name = ?",["Billiam"]);
 
 ###queryAll
-Accepts: Component Object, Query String
+Accepts: Component Object, Query String, Array of Params
 Returns: all objects of query
 Example:
 
 	users = ORM.queryAll("user","SELECT id,name FROM user");
+	users = ORM.queryAll("user","SELECT id,name FROM user WHERE name = ?",["Billiam"]);
 
 ###exportAll
 Accepts: Array of Component Objects
