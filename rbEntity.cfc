@@ -59,7 +59,7 @@ component {
 		if(structKeyExists(variables,"#key#")){
 			return variables[key];
 		}else{
-			return "";
+			return;
 		}
 	}
 

@@ -163,6 +163,12 @@ Getters also have the ability to be chained
 
 	var user = ORM.dispense("user");
 	user.setFirstName("Billiam").setLastName("Bopper");
+	var firstName = user.getFirstName();
+	if(isDefined("firstName")){
+		//First Name exists in user
+	}else{
+		//First Name doesn't exist in user
+	}
 
 ###Component Object Methods
 Along with the standard get/set methods, a ORMEntity Object has a few built in methods to help with Lazy Loading

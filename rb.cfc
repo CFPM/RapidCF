@@ -63,7 +63,7 @@ component {
 		var primaryKey = arguments.object.primaryKey;
 		var primaryKeyValue = Evaluate("object.get#primaryKey#()");
 		if(len(trim(primaryKey))){
-			if(len(trim(primaryKeyValue))){
+			if(isDefined("primaryKeyValue")){
 				update(arguments.object);
 			}else{
 				create(arguments.object);
@@ -80,13 +80,11 @@ component {
 	public void function trash(required object){
 		var primaryKey = arguments.object.primaryKey;
 		if(len(trim(primaryKey))){
-			transaction{
-				var primaryKeyValue = Evaluate("object.get#primaryKey#()");
-				var queryService = new query();
-				queryService.setDatasource(variables.dataSource); 
-				queryService.setName(arguments.object.componentName);
-				results = queryService.execute(sql="DELETE FROM [#arguments.object.componentName#] WHERE [#primaryKey#] = '#primaryKeyValue#'"); 
-			}
+			var primaryKeyValue = Evaluate("object.get#primaryKey#()");
+			var queryService = new query();
+			queryService.setDatasource(variables.dataSource); 
+			queryService.setName(arguments.object.componentName);
+			results = queryService.execute(sql="DELETE FROM [#arguments.object.componentName#] WHERE [#primaryKey#] = '#primaryKeyValue#'"); 
 		}
 	}
 
@@ -150,7 +148,7 @@ component {
 		}
 		results = queryService.execute(sql="INSERT INTO [#arguments.object.componentName#] (#columnsList#) OUTPUT inserted.#arguments.object.primaryKey# VALUES (#valuesList#)");
 		var records = results.getResult();
-		variables[arguments.object.primaryKey] = records[arguments.object.primaryKey][1];
+		Evaluate("object.set#arguments.object.primaryKey#(records[arguments.object.primaryKey][1])");
 	}
 
 	private function update(required object){
