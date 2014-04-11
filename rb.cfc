@@ -18,7 +18,7 @@ component {
 		try{
 			var object = new "#componentName#"();
 		}catch(any e){
-			var object = new rbEntity();		
+			var object = new rbEntity();
 		}		
 		
 		try{
@@ -29,7 +29,7 @@ component {
 			object.primaryKey = "";
 		}
 
-		object.ORMService = this;
+		object.rb = this;
 		object.componentName = arguments.componentName;
 		return object;
 	}
@@ -42,10 +42,11 @@ component {
 	public function find(required string componentName,where,values){
 		var object = dispense(arguments.componentName);
 		var records = whereQuery(componentName, where, values);
-		if(records.recordcount > 0)
+		if(records.recordcount > 0){
 			return populateObject(object,records);
-		else
+		}else{
 			return false;
+		}
 	}
 
 	public function findAll(required string componentName,required string where,required array values){
@@ -61,7 +62,7 @@ component {
 
 	public function store(required object){
 		var primaryKey = arguments.object.primaryKey;
-		var primaryKeyValue = Evaluate("object.get#primaryKey#()");
+		var primaryKeyValue = object._get(primaryKey);
 		if(len(trim(primaryKey))){
 			if(isDefined("primaryKeyValue")){
 				update(arguments.object);
@@ -80,7 +81,7 @@ component {
 	public void function trash(required object){
 		var primaryKey = arguments.object.primaryKey;
 		if(len(trim(primaryKey))){
-			var primaryKeyValue = Evaluate("object.get#primaryKey#()");
+			var primaryKeyValue = object._get(primaryKey);
 			var queryService = new query();
 			queryService.setDatasource(variables.dataSource); 
 			queryService.setName(arguments.object.componentName);
@@ -141,37 +142,40 @@ component {
 		
 		for(var columnName in arguments.object.tableColumns){
 			if(structKeyExists(data,"#columnName#")){
-				queryService.addParam(value=data[columnName]);
-				columnsList = listAppend(columnsList,"[#columnName#]");
-				valuesList = listAppend(valuesList, " ? ");
+				columnsList = listAppend(columnsList," [#columnName#] ");
+				valuesList = listAppend(valuesList, " :#columnName# ");
+				queryService.addParam(name=columnName,value=data[columnName]);
 			}
 		}
 		results = queryService.execute(sql="INSERT INTO [#arguments.object.componentName#] (#columnsList#) OUTPUT inserted.#arguments.object.primaryKey# VALUES (#valuesList#)");
 		var records = results.getResult();
-		Evaluate("object.set#arguments.object.primaryKey#(records[arguments.object.primaryKey][1])");
+		object._set(arguments.object.primaryKey, records[arguments.object.primaryKey][1]);
 	}
 
 	private function update(required object){
 		var queryService = new query();
 		queryService.setDatasource(variables.dataSource); 
 		queryService.setName(arguments.object.componentName);
+
+		var primaryKey = arguments.object.primaryKey;
+		var primaryKeyValue = object._get(primaryKey);
 		
 		var updateList = "";
 
 		var data = arguments.object._export();
 		for(var columnName in arguments.object.tableColumns){
-			if(structKeyExists(data,"#columnName#") && columnName != arguments.object.primaryKey){
+			if(structKeyExists(data,"#columnName#") && columnName != primaryKey){
 				queryService.addParam(name=columnName,value=data[columnName]);
 				updateList = listAppend(updateList," [#columnName#] = :#columnName# ");
 			}			
 		}
-		var primaryKeyValue = data[arguments.object.primaryKey];
-		results = queryService.execute(sql="UPDATE [#arguments.object.componentName#] SET #updateList# WHERE [#arguments.object.primaryKey#] = '#primaryKeyValue#'");
+		results = queryService.execute(sql="UPDATE [#arguments.object.componentName#] SET #updateList# WHERE [#primaryKey#] = '#primaryKeyValue#'");
 	}	
 
 	private function whereQuery(required string componentName, string where="", required array values){
-		if(!len(trim(where)))
+		if(!len(trim(where))){
 			where = "1=1";
+		}
 		var queryService = new query();
 		queryService.setDatasource(variables.dataSource); 
 		queryService.setName(arguments.componentName);
@@ -186,8 +190,9 @@ component {
 		for(var i = 1; i <= ListLen(records.columnList); i++){
 			var column = ListGetAt(records.columnList,i);
 			var value = records[column][iterator];
-			if(value!="")
-				Evaluate("object.set#column#(value)");
+			if(value!=""){
+				object._set(column,value);
+			}
 		}
 		return object;
 	}

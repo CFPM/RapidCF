@@ -11,10 +11,10 @@ component {
 	public function onMissingMethod(MissingMethodName, MissingMethodArguments){
 		if(Find("set",arguments.MissingMethodName)){
 			var key = Replace(arguments.MissingMethodName,"set","");
-			return set(key,arguments.MissingMethodArguments[1]);
+			return this._set(key,arguments.MissingMethodArguments[1]);
 		}else if(Find("get",arguments.MissingMethodName)){
 			var key = Replace(arguments.MissingMethodName,"get","");
-			return get(key);
+			return this._get(key);
 		}else if(Find("_own",arguments.MissingMethodName)){
 			var component = Replace(arguments.MissingMethodName,"_own","");
 			var referenceKey = len(trim(arguments.MissingMethodArguments[1])) ? arguments.MissingMethodArguments[1] : "";
@@ -24,19 +24,23 @@ component {
 			throw (message="Missing Method", type="error");
 		}
 	}
-	public function _export(){
+	public function _export(keys=arrayNew(1)){
 		var output = {};
-		for(key in variables){
-			if(key != "THIS" && !isFunction(key)){
-				if(IsInstanceOf(variables[key],"rb") || IsInstanceOf(variables[key],"#this.componentName#")){
-					output[key] = variables[key]._export();
-				}else if(isArray(variables[key]) && ( IsInstanceOf(variables[key][1],"rb") || IsInstanceOf(variables[key],"#this.componentName#"))){
-					output[key] = arrayNew(1);
-					for(var i = 1; i <= arrayLen(variables[key]); i++){
-						output[key][i] = variables[key][i]._export();
-					}
-				}else{
-					if(key != "KEY"){
+		if(arrayLen(keys)>0){
+			for(key in keys){
+				output[key] = variables[key];
+			}
+		}else{
+			for(key in variables){
+				if(key != "THIS" && key != "KEY" && !isFunction(key)){
+					if(IsInstanceOf(variables[key],"rb") || IsInstanceOf(variables[key],"#this.componentName#")){
+						output[key] = variables[key]._export();
+					}else if(isArray(variables[key]) && ( IsInstanceOf(variables[key][1],"rb") || IsInstanceOf(variables[key],"#this.componentName#"))){
+						output[key] = arrayNew(1);
+						for(var i = 1; i <= arrayLen(variables[key]); i++){
+							output[key][i] = variables[key][i]._export();
+						}
+					}else{
 						output[key] = variables[key];
 					}
 				}
@@ -55,7 +59,7 @@ component {
 		this[name] = func;
 	}
 
-	private function get(key){
+	public function _get(key){
 		if(structKeyExists(variables,"#key#")){
 			return variables[key];
 		}else{
@@ -63,33 +67,37 @@ component {
 		}
 	}
 
-	private function set(key, value){
+	public function _set(key, value){
 		variables[key] = value;
 		return this;
 	}
 
-	private function _own(component,referenceKey="",referenceColumn=""){
+	private function _own(componentName,referenceKey="",referenceColumn=""){
 		if(len(trim(referenceKey))){
 			if(len(trim(referenceColumn))){
 				var referenceKeyID = variables[arguments.referenceColumn];
 			}else{
-				var referenceKeyID = variables[arguments.component & arguments.referenceKey];
+				var referenceKeyID = variables[arguments.componentName & arguments.referenceKey];
 			}
 		}else{
 			referenceKey = this.componentName & this.primaryKey;
 			var referenceKeyID = variables[this.primaryKey];
 		}
 		if(len(trim(referenceKeyID))){
-			variables[component] = this.ORMService.findAll(component,referenceKey &  " = ?",[referenceKeyID]);
+			variables[componentName] = this.rb.findAll(componentName,referenceKey &  " = ?",[referenceKeyID]);
 		}else{
-			variables[component] = arrayNew(1);
+			variables[componentName] = arrayNew(1);
 		}
-		return variables[component];
+		return variables[componentName];
 	}
 
 	private function isFunction(str) {
-		if(ListFindNoCase(StructKeyList(GetFunctionList()),str)) return 1;
-		if(IsDefined(str) AND Evaluate("IsCustomFunction(#str#)")) return 1;
+		if(ListFindNoCase(StructKeyList(GetFunctionList()),str)){
+			return 1;
+		}
+		if(IsDefined(str) AND Evaluate("IsCustomFunction(#str#)")){
+			return 1;
+		}
 		return 0;
 	}
 }

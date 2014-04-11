@@ -174,6 +174,8 @@ Getters also have the ability to be chained
 Along with the standard get/set methods, a ORMEntity Object has a few built in methods to help with Lazy Loading
 
 ####_export
+Accepts: Array of keys to export (not required)
+Returns: Struct
 Description: Exports the object, and all children objects
 
 ####_import
