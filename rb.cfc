@@ -10,200 +10,209 @@ component {
 		return this;
 	}
 
-	public function setup(required string dataSource){
+	public function setup(required string dataSource, string modelPath = ExpandPath("../")){
 		variables.dataSource = arguments.dataSource;
+		variables.modelPath = arguments.modelPath;
 	}
 
 	public function dispense(required string componentName){
-		try{
-			var object = new "#componentName#"();
-		}catch(any e){
-			var object = new rbEntity();
-		}		
+		var bean = new bean();
+		bean._info = {};
+		bean._info.componentName = componentName;
+
+		if(!isDefined("bean._info.tableName")){
+			bean._info.tableName = arguments.componentName;
+		}
 		
 		try{
-			object.tableColumns = getColumns(componentName);
-			object.primaryKey = getPrimaryKey(componentName);
+			bean._info.tableColumns = getColumns(bean._info.tableName);
+			bean._info.primaryKey = getPrimaryKey(bean._info.tableName);
 		}catch(any e){
-			object.tableColumns = ArrayNew(1);
-			object.primaryKey = "";
+			bean._info.tableColumns = [];
+			bean._info.primaryKey = "";
 		}
 
-		object.rb = this;
-		object.componentName = arguments.componentName;
-		return object;
+		bean.loadModel(getDefaultModelName(componentName));
+		bean.rb = this;
+		return bean;
 	}
 
 	public function load(required string componentName, required any ID){
-		var primaryKey = getPrimaryKey(componentName);
-		return this.find(arguments.componentName,"#primaryKey# = ? ",[id]);
+		var bean = dispense(arguments.componentName);
+		return this.find(arguments.componentName,"#bean._info.primaryKey# = ? ",[id]);
 	}
 
-	public function find(required string componentName,where,values){
-		var object = dispense(arguments.componentName);
-		var records = whereQuery(componentName, where, values);
+	public function find(required string componentName, required string where, required array values){
+		var bean = dispense(arguments.componentName);
+		var records = whereQuery(bean, where, values);
 		if(records.recordcount > 0){
-			return populateObject(object,records);
+			return populatebean(bean,records);
 		}else{
 			return false;
 		}
 	}
 
-	public function findAll(required string componentName,required string where,required array values){
-		var records = whereQuery(componentName, where, values);
-		var allObjects = arrayNew(1);
+	public function findAll(required string componentName, string where="", array values=[]){
+		var bean = dispense(arguments.componentName);
+		var records = whereQuery(bean, arguments.where, arguments.values);
+		var allbeans = [];
 		for(var i = 1; i <= records.recordcount; i++){
-			var object = dispense(arguments.componentName);
-			object = populateObject(object, records, i);
-			arrayAppend(allObjects,object);
+			var bean = dispense(arguments.componentName);
+			bean = populatebean(bean, records, i);
+			arrayAppend(allbeans,bean);
 		}
-		return allObjects;	
+		return allbeans;	
 	}
 
-	public function store(required object){
-		var primaryKey = arguments.object.primaryKey;
-		var primaryKeyValue = object._get(primaryKey);
-		if(len(trim(primaryKey))){
-			if(isDefined("primaryKeyValue")){
-				update(arguments.object);
+	public function store(required bean){
+		var primaryKey = arguments.bean._info.primaryKey;
+		if(isDefined("primaryKey")){
+			if(isDefined("bean.#primaryKey#")){
+				update(arguments.bean);
 			}else{
-				create(arguments.object);
+				create(arguments.bean);
 			}
 		}
 	}
 
-	public void function storeAll(required array objects){
-		for(var object in objects){
-			store(object);
+	public void function storeAll(required array beans){
+		for(var bean in beans){
+			store(bean);
 		}
 	}
 
-	public void function trash(required object){
-		var primaryKey = arguments.object.primaryKey;
+	public void function trash(required bean){
+		var primaryKey = arguments.bean._info.primaryKey;
 		if(len(trim(primaryKey))){
-			var primaryKeyValue = object._get(primaryKey);
+			var primaryKeyValue = bean[primaryKey];
 			var queryService = new query();
 			queryService.setDatasource(variables.dataSource); 
-			queryService.setName(arguments.object.componentName);
-			results = queryService.execute(sql="DELETE FROM [#arguments.object.componentName#] WHERE [#primaryKey#] = '#primaryKeyValue#'"); 
+			queryService.setName(arguments.bean._info.tableName);
+			var results = queryService.execute(sql="DELETE FROM [#arguments.bean._info.tableName#] WHERE [#primaryKey#] = '#primaryKeyValue#'"); 
 		}
 	}
 
-	public function query(required string componentName, required string queryString, array params = ArrayNew(1)){
+	public function query(required string componentName, required string queryString, array params = []){
 		var results = queryThis(arguments.queryString,params);
 		var records = results.getResult();
-		var object = dispense(arguments.componentName);
-		return populateObject(object, records);
+		var bean = dispense(arguments.componentName);
+		return populatebean(bean, records);
 	}
 
-	public function queryAll(required string componentName, required string queryString, array params = ArrayNew(1)){
+	public function queryAll(required string componentName, required string queryString, array params = []){
 		var results = queryThis(queryString,params);
 		var records = results.getResult();
-		var allObjects = arrayNew(1);
+		var allbeans = [];
 		for(var i = 1; i <= records.recordcount; i++){
-			var object = dispense(arguments.componentName);
-			object = populateObject(object, records, i);
-			arrayAppend(allObjects,object);
+			var bean = dispense(arguments.componentName);
+			bean = populatebean(bean, records, i);
+			arrayAppend(allbeans,bean);
 		}
-		return allObjects;
+		return allbeans;
 	}
 
-	public function exportAll(required array objects){
-		var exportArray = ArrayNew(1);
-		for(var object in objects){
-			arrayAppend(exportArray,object._export());
+	public function exportAll(required array beans){
+		var exportArray = [];
+		for(var bean in beans){
+			arrayAppend(exportArray,bean.export());
 		}
 		return exportArray;
 	}
 
 	public function importAll(required string componentName, required array dataArray){
-		var objectArray = ArrayNew(1);
+		var beanArray = [];
 		for(var data in dataArray){
-			var object = dispense(arguments.componentName);
-			object._import(data);
-			arrayAppend(objectArray,object);
+			var bean = dispense(arguments.componentName);
+			bean.import(data);
+			arrayAppend(beanArray,bean);
 		}
-		return objectArray;
+		return beanArray;
 	}
 
 /*
  * Private functions
  */
 
-	private function create(required object){
+	private function create(required bean){
 		var queryService = new query();
 		queryService.setDatasource(variables.dataSource); 
-		queryService.setName(arguments.object.componentName);
+		queryService.setName(arguments.bean._info.tableName);
 
 		var columnsList = "";
 		var valuesList = "";
 		
-		var data = arguments.object._export();
+		var data = arguments.bean.export();
 		
-		for(var columnName in arguments.object.tableColumns){
+		for(var columnName in arguments.bean._info.tableColumns){
 			if(structKeyExists(data,"#columnName#")){
 				columnsList = listAppend(columnsList," [#columnName#] ");
 				valuesList = listAppend(valuesList, " :#columnName# ");
-				queryService.addParam(name=columnName,value=data[columnName]);
+				if(IsDate(data[columnName]))
+					queryService.addParam(name=columnName,value=data[columnName],cfsqltype="CF_SQL_DATE");
+				else
+					queryService.addParam(name=columnName,value=data[columnName]);
 			}
 		}
-		results = queryService.execute(sql="INSERT INTO [#arguments.object.componentName#] (#columnsList#) OUTPUT inserted.#arguments.object.primaryKey# VALUES (#valuesList#)");
+		var results = queryService.execute(sql="INSERT INTO [#arguments.bean._info.tableName#] (#columnsList#) OUTPUT inserted.#arguments.bean._info.primaryKey# VALUES (#valuesList#)");
 		var records = results.getResult();
-		object._set(arguments.object.primaryKey, records[arguments.object.primaryKey][1]);
+		bean[arguments.bean._info.primaryKey] = records[arguments.bean._info.primaryKey][1];
 	}
 
-	private function update(required object){
+	private function update(required bean){
 		var queryService = new query();
 		queryService.setDatasource(variables.dataSource); 
-		queryService.setName(arguments.object.componentName);
+		queryService.setName(arguments.bean._info.tableName);
 
-		var primaryKey = arguments.object.primaryKey;
-		var primaryKeyValue = object._get(primaryKey);
+		var primaryKey = arguments.bean._info.primaryKey;
+		var primaryKeyValue = bean[primaryKey];
 		
 		var updateList = "";
 
-		var data = arguments.object._export();
-		for(var columnName in arguments.object.tableColumns){
+		var data = arguments.bean.export();
+		for(var columnName in arguments.bean._info.tableColumns){
 			if(structKeyExists(data,"#columnName#") && columnName != primaryKey){
-				queryService.addParam(name=columnName,value=data[columnName]);
+				if(IsDate(data[columnName]))
+					queryService.addParam(name=columnName,value=data[columnName],cfsqltype="CF_SQL_DATE");
+				else
+					queryService.addParam(name=columnName,value=data[columnName]);
 				updateList = listAppend(updateList," [#columnName#] = :#columnName# ");
 			}			
 		}
-		results = queryService.execute(sql="UPDATE [#arguments.object.componentName#] SET #updateList# WHERE [#primaryKey#] = '#primaryKeyValue#'");
+		var results = queryService.execute(sql="UPDATE [#arguments.bean._info.tableName#] SET #updateList# WHERE [#primaryKey#] = '#primaryKeyValue#'");
 	}	
 
-	private function whereQuery(required string componentName, string where="", required array values){
+	private function whereQuery(required bean, string where="", array values = []){
 		if(!len(trim(where))){
-			where = "1=1";
+			where = " 1=1 ";
 		}
 		var queryService = new query();
 		queryService.setDatasource(variables.dataSource); 
-		queryService.setName(arguments.componentName);
+		queryService.setName(arguments.bean._info.tableName);
 		for(var value in values){
 			queryService.addParam(value=value);
 		}
-		results = queryService.execute(sql="SELECT * FROM [#arguments.componentName#] WHERE #arguments.where#"); 
+		var results = queryService.execute(sql="SELECT * FROM [#arguments.bean._info.tableName#] WHERE #arguments.where#"); 
 		return results.getResult();
 	}
 
-	private function populateObject(required object, required records, required iterator = 1){
+	private function populatebean(required bean, required records, required iterator = 1){
 		for(var i = 1; i <= ListLen(records.columnList); i++){
 			var column = ListGetAt(records.columnList,i);
 			var value = records[column][iterator];
 			if(value!=""){
-				object._set(column,value);
+				bean[column] = value;
 			}
 		}
-		return object;
+		return bean;
 	}
 
-	private function getTableInfo(required string componentName){
-		var dbschema = new dbinfo(datasource=variables.dataSource,table=arguments.componentName);
+	private function getTableInfo(required string tableName){
+		var dbschema = new dbinfo(datasource=variables.dataSource,table=arguments.tableName);
 		return dbschema;
 	}
 
-	private function getPrimaryKey(required string componentName){
-		var dbschema = getTableInfo(componentName);
+	private function getPrimaryKey(required string tableName){
+		var dbschema = getTableInfo(tableName);
 		var columns = dbschema.columns();
 		var primaryKey = "";
 		for(var i = 1; i <= columns.recordcount; i++){
@@ -214,17 +223,17 @@ component {
 		return primaryKey;
 	}
 
-	private function getColumns(required string componentName){
-		var dbschema = getTableInfo(componentName);
+	private function getColumns(required string tableName){
+		var dbschema = getTableInfo(tableName);
 		var columns = dbschema.columns();
-		var columnArray = ArrayNew(1);
+		var columnArray = [];
 		for(var i = 1; i <= columns.recordcount; i++){
 			arrayAppend(columnArray,columns["COLUMN_NAME"][i]);	
 		}
 		return columnArray;
 	}
 
-	private function queryThis(required string queryString, array params = ArrayNew(1)){
+	private function queryThis(required string queryString, array params = []){
 		var queryService = new query();
 		queryService.setDatasource(variables.dataSource); 
 		for(param in params){
@@ -232,6 +241,21 @@ component {
 		}
 		var results = queryService.execute(sql=arguments.queryString); 
 		return results;
+	}
+
+	private function getDefaultModelName(componentName){
+		var modelName = componentName & "Model.cfc";
+		var dir = DirectoryList(variables.modelPath,true);
+		for(var file in dir){
+			if(find(modelName,file)){
+				file = Replace(file,variables.modelPath,"");
+				file = Replace(file,"/",".","ALL");
+				file = Replace(file,"\",".","ALL");
+				file = Replace(file,".cfc","");
+				return file;
+			}
+		}
+		return "model";
 	}
 
 

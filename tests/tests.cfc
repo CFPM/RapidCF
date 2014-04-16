@@ -6,8 +6,6 @@
 
  component {
 
-	property name="rb" inject="model" scope="variables";
-
 	function init() {
 		return this;
 	}
@@ -49,7 +47,7 @@
 	}
 
 	function setupORM(){
-		variables.ORM = new rb();
+		variables.ORM = CreateObject("component","common.CFC.com.RedBeanCF.rb");
 		variables.ORM.setup(variables.dataSource);
 	}
 
@@ -88,6 +86,8 @@
 		testOneToMany();
 		testManyToMany();
 
+		testFullName();
+
 		tearDown();
 
 		writeDump("Tests were successful");
@@ -98,7 +98,9 @@
 		var user1 = variables.ORM.dispense("user");
 		var user2 = variables.ORM.dispense("user");
 
-		user1.setFirstName("John").setLastName("Doe").setEmail("john.doe@gmail.com");
+		user1.FirstName = "John";
+		user1.LastName = "Doe";
+		user1.Email = "john.doe@gmail.com";
 		variables.ORM.store(user1);
 		
 		var user2Struct = {
@@ -106,7 +108,7 @@
 			lastName = "Doe",
 			email = "jane.doe@gmail.com"
 		};
-		user2._import(user2Struct);
+		user2.import(user2Struct);
 		variables.ORM.store(user2);
 
 	}
@@ -116,15 +118,22 @@
 		var user2 = variables.ORM.find("user","firstName = ? AND lastName = ?",["Jane","Doe"]);
 
 		var message = variables.ORM.dispense("message");
-		message.setText("Hello John Doe").setUserID(user1.getID()).setUserIDCreator(user2.getID());
+		message.text = "Hello John Doe";
+		message.UserID = user1.ID;
+		message.UserIDCreator = user2.ID;
+
 		variables.ORM.store(message);
 
 		var message = variables.ORM.dispense("message");
-		message.setText("Hi Jane").setUserID(user2.getID()).setUserIDCreator(user1.getID());
+		message.Text = "Hi Jane";
+		message.UserID = user2.ID;
+		message.UserIDCreator = user1.ID;
 		variables.ORM.store(message);
 		
 		var message = variables.ORM.dispense("message");
-		message.setText("How are you?").setUserID(user1.getID()).setUserIDCreator(user2.getID());
+		message.Text = "How are you?";
+		message.UserID = user1.ID;
+		message.UserIDCreator = user2.ID;
 		variables.ORM.store(message);
 
 	}
@@ -154,7 +163,7 @@
 
 	function editUsers(){
 		var user = variables.ORM.find("user","firstName = ? AND lastName = ?",["John","Doe"]);
-		user.setEmail("john.doe@yahoo.com");
+		user.Email = "john.doe@yahoo.com";
 		variables.ORM.store(user);
 	}
 	
@@ -198,7 +207,7 @@
 
 	function testOneToMany(){
 		var user = variables.ORM.find("user","firstName = ? AND lastName = ?",["John","Doe"]);
-		var userMessages = user._ownMessage();
+		var userMessages = user.ownMessage();
 
 		if(arrayLen(userMessages)!=2)
 			throw "ERROR: Failed to grab all messages of one user";
@@ -207,16 +216,22 @@
 	function testManyToMany(){
 		var user = variables.ORM.find("user","firstName = ? AND lastName = ?",["John","Doe"]);
 		var userCreated = variables.ORM.find("user","firstName = ? AND lastName = ?",["Jane","Doe"]);
-		var message = variables.ORM.find("message","userID = ?",[user.getID()]);
+		var message = variables.ORM.find("message","userID = ?",[user.ID]);
 
-		var messageUser = message._ownUser("ID");
-		var messageUserCreated = message._ownUser("ID","userIDCreator");
+		var messageUser = message.ownUser("ID");
+		var messageUserCreated = message.ownUser("ID","userIDCreator");
 
-		if(messageUser[1].getID() != user.getID())
+		if(messageUser[1].ID != user.ID)
 			throw "ERROR: Did not get the correct user for lazy loading";
 
-		if(messageUserCreated[1].getID() != userCreated.getID())
+		if(messageUserCreated[1].ID != userCreated.ID)
 			throw "ERROR: Did not get the correct userCreated for lazy loading";
+	}
+
+	function testFullName(){
+		var user = variables.ORM.find("user","firstName = ? AND lastName = ?",["John","Doe"]);
+		if(user.getFullName() != "John Doe")
+			throw "ERROR: Model is not working";
 	}
 
 }
