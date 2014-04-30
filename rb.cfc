@@ -13,6 +13,7 @@ component {
 	public function setup(required string dataSource, string modelPath = ExpandPath("../")){
 		variables.dataSource = arguments.dataSource;
 		variables.modelPath = arguments.modelPath;
+		variables.modelPathDir = DirectoryList(arguments.modelPath,true);
 	}
 
 	public function dispense(required string componentName){
@@ -26,14 +27,16 @@ component {
 		
 		try{
 			bean._info.tableColumns = getColumns(bean._info.tableName);
+			bean._info.tableColumnTypes = getColumnTypes(bean._info.tableName);
 			bean._info.primaryKey = getPrimaryKey(bean._info.tableName);
 		}catch(any e){
 			bean._info.tableColumns = [];
+			bean._info.tableColumnTypes = {};
 			bean._info.primaryKey = "";
 		}
-
+		
 		bean.loadModel(getDefaultModelName(componentName));
-		bean.rb = this;
+		bean._rb = this;
 		return bean;
 	}
 
@@ -42,17 +45,17 @@ component {
 		return this.find(arguments.componentName,"#bean._info.primaryKey# = ? ",[id]);
 	}
 
-	public function find(required string componentName, required string where, required array values){
+	public function findOne(required string componentName, required string where, required array values){
 		var bean = dispense(arguments.componentName);
 		var records = whereQuery(bean, where, values);
 		if(records.recordcount > 0){
 			return populatebean(bean,records);
 		}else{
-			return false;
+			return;
 		}
 	}
 
-	public function findAll(required string componentName, string where="", array values=[]){
+	public function find(required string componentName, string where="", array values=[]){
 		var bean = dispense(arguments.componentName);
 		var records = whereQuery(bean, arguments.where, arguments.values);
 		var allbeans = [];
@@ -64,15 +67,12 @@ component {
 		return allbeans;	
 	}
 
-	public function store(required bean){
-		var primaryKey = arguments.bean._info.primaryKey;
-		if(isDefined("primaryKey")){
-			if(isDefined("bean.#primaryKey#")){
-				update(arguments.bean);
-			}else{
-				create(arguments.bean);
-			}
-		}
+	public function store(beans){
+		if(isArray(beans)){
+			storeAll(beans);
+		}else{
+			save(beans);
+		}			
 	}
 
 	public void function storeAll(required array beans){
@@ -147,15 +147,14 @@ component {
 			if(structKeyExists(data,"#columnName#")){
 				columnsList = listAppend(columnsList," [#columnName#] ");
 				valuesList = listAppend(valuesList, " :#columnName# ");
-				if(IsDate(data[columnName]))
-					queryService.addParam(name=columnName,value=data[columnName],cfsqltype="CF_SQL_DATE");
-				else
-					queryService.addParam(name=columnName,value=data[columnName]);
+				queryService.addParam(name=columnName,value=data[columnName],cfsqltype=getSQLType(arguments.bean._info.tableColumnTypes[columnName]));
 			}
 		}
 		var results = queryService.execute(sql="INSERT INTO [#arguments.bean._info.tableName#] (#columnsList#) OUTPUT inserted.#arguments.bean._info.primaryKey# VALUES (#valuesList#)");
 		var records = results.getResult();
-		bean[arguments.bean._info.primaryKey] = records[arguments.bean._info.primaryKey][1];
+
+		bean.setPrimaryKey(records[arguments.bean._info.primaryKey][1]);
+		bean.cascadePrimaryKey();
 	}
 
 	private function update(required bean){
@@ -171,10 +170,7 @@ component {
 		var data = arguments.bean.export();
 		for(var columnName in arguments.bean._info.tableColumns){
 			if(structKeyExists(data,"#columnName#") && columnName != primaryKey){
-				if(IsDate(data[columnName]))
-					queryService.addParam(name=columnName,value=data[columnName],cfsqltype="CF_SQL_DATE");
-				else
-					queryService.addParam(name=columnName,value=data[columnName]);
+				queryService.addParam(name=columnName,value=data[columnName],cfsqltype=getSQLType(arguments.bean._info.tableColumnTypes[columnName]));
 				updateList = listAppend(updateList," [#columnName#] = :#columnName# ");
 			}			
 		}
@@ -206,7 +202,44 @@ component {
 		return bean;
 	}
 
-	private function getTableInfo(required string tableName){
+	private function queryThis(required string queryString, array params = []){
+		var queryService = new query();
+		queryService.setDatasource(variables.dataSource); 
+		for(param in params){
+			queryService.addParam(value=param);
+		}
+		var results = queryService.execute(sql=arguments.queryString); 
+		return results;
+	}
+
+	private function getDefaultModelName(componentName){
+		var modelName = componentName & "Model.cfc";
+		for(var file in variables.modelPathDir){
+			if(findNoCase(modelName,file)){
+				file = Replace(file,variables.modelPath,"");
+				file = Replace(file,"/",".","ALL");
+				file = Replace(file,"\",".","ALL");
+				file = Replace(file,".cfc","");
+				return file;
+			}
+		}
+		return "model";
+	}
+
+	private function save(required bean){
+		if(bean.isSaved()){
+			update(bean);
+		}else{
+			create(bean);
+		}
+		bean.cascadeSave();
+	}
+
+	/*
+	 * Database helpers
+	 */
+
+	public function getTableInfo(required string tableName){
 		var dbschema = new dbinfo(datasource=variables.dataSource,table=arguments.tableName);
 		return dbschema;
 	}
@@ -233,30 +266,28 @@ component {
 		return columnArray;
 	}
 
-	private function queryThis(required string queryString, array params = []){
-		var queryService = new query();
-		queryService.setDatasource(variables.dataSource); 
-		for(param in params){
-			queryService.addParam(value=param);
+	private function getColumnTypes(required string tableName){
+		var dbschema = getTableInfo(tableName);
+		var columns = dbschema.columns();
+		var columnTypeStruct = {};
+		for(var i = 1; i <= columns.recordcount; i++){
+			columnTypeStruct[columns["COLUMN_NAME"][i]] = columns["TYPE_NAME"][i];
 		}
-		var results = queryService.execute(sql=arguments.queryString); 
-		return results;
+		return columnTypeStruct;
 	}
 
-	private function getDefaultModelName(componentName){
-		var modelName = componentName & "Model.cfc";
-		var dir = DirectoryList(variables.modelPath,true);
-		for(var file in dir){
-			if(find(modelName,file)){
-				file = Replace(file,variables.modelPath,"");
-				file = Replace(file,"/",".","ALL");
-				file = Replace(file,"\",".","ALL");
-				file = Replace(file,".cfc","");
-				return file;
-			}
-		}
-		return "model";
+	private function getSQLType(required string type){
+		switch(type){
+			case "bigint": return "CF_SQL_BIGINT"; break;
+			case "bit": return "CF_SQL_BIT"; break;
+			case "date": return "CF_SQL_DATE"; break;
+			case "datetime": return "CF_SQL_DATE"; break;
+			case "decimal": return "CF_SQL_DECIMAL"; break;
+			case "float": return "CF_SQL_FLOAT"; break;
+			case "int": return "CF_SQL_INTEGER"; break;
+			case "varchar": return "CF_SQL_VARCHAR"; break;
+			case "timestamp": return "CF_SQL_TIMESTAMP"; break;
+			default: return "CF_SQL_VARCHAR"; break;
+		} 
 	}
-
-
 }

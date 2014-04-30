@@ -213,3 +213,9 @@ Dispense once, and then copy the rest of the time
 
 ###research DBinfo
 See how dbinfo() gets it's data and if it caches it
+
+###Export/Import
+Allows a list of export/import items
+
+###Find
+Find,FindOne,FindAll
