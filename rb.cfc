@@ -154,7 +154,6 @@ component {
 		var records = results.getResult();
 
 		bean.setPrimaryKey(records[arguments.bean._info.primaryKey][1]);
-		bean.cascadePrimaryKey();
 	}
 
 	private function update(required bean){

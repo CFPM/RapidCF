@@ -40,30 +40,35 @@ component {
 		return output;
 	}
 
-	private function exportScope(required scope, required keys){
+	private function exportScope(required scope, required array keys){
 		var output = {};
-		if(arrayLen(keys)>0){
-			for(var key in keys){
+
+		if(arrayIsEmpty(arguments.keys)){
+			arguments.keys = listToArray(structKeyList(scope));
+		}
+
+		for(var key in arguments.keys){
+			if(NOT structKeyExists(scope, key)){
+				continue;
+			}
+			if(NOT isExportableKey(key)){
+				continue;
+			}
+
+			if(IsInstanceOf(scope[key],"bean")){
+				output[key] = scope[key].export();
+			}
+			else if(isArray(scope[key]) && arrayLen(scope[key]) > 0 && IsInstanceOf(scope[key][1],"bean")){
+				output[key] = arrayNew(1);
+				for(var i = 1; i <= arrayLen(scope[key]); i++){
+					output[key][i] = scope[key][i].export();
+				}
+			}
+			else{
 				output[key] = scope[key];
 			}
 		}
-		else{
-			for(var key in scope){
-				if(isExportableKey(key)){
-					if(IsInstanceOf(scope[key],"bean")){
-						output[key] = scope[key].export();
-					}else if(isArray(scope[key]) && arrayLen(scope[key]) > 0 && IsInstanceOf(scope[key][1],"bean")){
-						output[key] = arrayNew(1);
-						for(var i = 1; i <= arrayLen(scope[key]); i++){
-							output[key][i] = scope[key][i].export();
-						}
-					}
-					else{
-						output[key] = scope[key];
-					}
-				}
-			}
-		}
+
 		return output;
 	}
 	private function isExportableKey(required string key){
@@ -114,8 +119,7 @@ component {
 		}
 		return variables.owns[arguments.componentName];
 	}
-
-	private function isFunction(str) {
+	private function isFunction(str){
 		if(ListFindNoCase(StructKeyList(GetFunctionList()),str)){
 			return 1;
 		}
@@ -127,6 +131,7 @@ component {
 
 	public function setPrimaryKey(required primaryKey){
 		this[getPrimaryKeyName()] = arguments.primaryKey;
+		cascadePrimaryKey();
 	}
 	private function getPrimaryKeyValue(){
 		return this[getPrimaryKeyName()];
@@ -134,7 +139,7 @@ component {
 	private function getPrimaryKeyName(){
 		return this._info.primaryKey;
 	}
-	public function cascadePrimaryKey(){
+	private function cascadePrimaryKey(){
 		cascadeKey(getPrimaryKeyName(), getPrimaryKeyValue());
 	}
 	public function cascadeKey(required string key, required value){
@@ -146,6 +151,7 @@ component {
 			}
 		}
 	}
+
 	public function cascadeSave(){
 		for(var ownName in variables.owns){
 			var beans = owns[ownName];
