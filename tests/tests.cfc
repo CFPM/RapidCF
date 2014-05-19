@@ -114,8 +114,8 @@
 	}
 
 	function createMessages(){
-		var user1 = variables.ORM.find("user","firstName = ? AND lastName = ?",["John","Doe"]);
-		var user2 = variables.ORM.find("user","firstName = ? AND lastName = ?",["Jane","Doe"]);
+		var user1 = variables.ORM.findOne("user","firstName = ? AND lastName = ?",["John","Doe"]);
+		var user2 = variables.ORM.findOne("user","firstName = ? AND lastName = ?",["Jane","Doe"]);
 
 		var message = variables.ORM.dispense("message");
 		message.text = "Hello John Doe";
@@ -162,7 +162,7 @@
 	}
 
 	function editUsers(){
-		var user = variables.ORM.find("user","firstName = ? AND lastName = ?",["John","Doe"]);
+		var user = variables.ORM.findOne("user","firstName = ? AND lastName = ?",["John","Doe"]);
 		user.Email = "john.doe@yahoo.com";
 		variables.ORM.store(user);
 	}
@@ -183,9 +183,9 @@
 	}
 
 	function deleteUsers(){
-		var user1 = variables.ORM.find("user","firstName = ? AND lastName = ?",["John","Doe"]);
+		var user1 = variables.ORM.findOne("user","firstName = ? AND lastName = ?",["John","Doe"]);
 		variables.ORM.trash(user1);
-		var user2 = variables.ORM.find("user","firstName = ? AND lastName = ?",["Jane","Doe"]);
+		var user2 = variables.ORM.findOne("user","firstName = ? AND lastName = ?",["Jane","Doe"]);
 		variables.ORM.trash(user2);
 	}
 
@@ -199,14 +199,14 @@
 			throw "ERROR: Failed to delete users";
 	}
 
-	function testFindAll(){
-		var users = variables.ORM.findAll("user");
+	function testFind(){
+		var users = variables.ORM.find("user");
 		if(arrayLen(users) != 2)
 			throw "ERROR: Failed to find all users";
 	}
 
 	function testOneToMany(){
-		var user = variables.ORM.find("user","firstName = ? AND lastName = ?",["John","Doe"]);
+		var user = variables.ORM.findOne("user","firstName = ? AND lastName = ?",["John","Doe"]);
 		var userMessages = user.ownMessage();
 
 		if(arrayLen(userMessages)!=2)
@@ -214,12 +214,12 @@
 	}
 
 	function testManyToMany(){
-		var user = variables.ORM.find("user","firstName = ? AND lastName = ?",["John","Doe"]);
-		var userCreated = variables.ORM.find("user","firstName = ? AND lastName = ?",["Jane","Doe"]);
-		var message = variables.ORM.find("message","userID = ?",[user.ID]);
+		var user = variables.ORM.findOne("user","firstName = ? AND lastName = ?",["John","Doe"]);
+		var userCreated = variables.ORM.findOne("user","firstName = ? AND lastName = ?",["Jane","Doe"]);
+		var message = variables.ORM.findOne("message","userID = ?",[user.ID]);
 
-		var messageUser = message.ownUser("ID");
-		var messageUserCreated = message.ownUser("ID","userIDCreator");
+		var messageUser = message.ownUser("userID","ID");
+		var messageUserCreated = message.ownUser("userIDCreator","ID");
 
 		if(messageUser[1].ID != user.ID)
 			throw "ERROR: Did not get the correct user for lazy loading";
@@ -229,7 +229,8 @@
 	}
 
 	function testFullName(){
-		var user = variables.ORM.find("user","firstName = ? AND lastName = ?",["John","Doe"]);
+		var user = variables.ORM.findOne("user","firstName = ? AND lastName = ?",["John","Doe"]);
+		user.loadModel("common.CFC.com.RedBeanCF.tests.UserRBTestModel");
 		if(user.getFullName() != "John Doe")
 			throw "ERROR: Model is not working";
 	}

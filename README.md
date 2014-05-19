@@ -191,7 +191,7 @@ Description: Exports the object, and all children objects
 Description: Imports a struct into the object
 
 ####ownComponentName
-Description: Loads all children objects of componentName based on primaryKey and primaryKeyID or loads all parent or horizontal relationship components when passed relationship key
+Description: Loads all children objects of componentName based on primaryKey and primaryKeyID or loads all parent or horizontal relationship components when passed bean column name and own component column name
 Example:
 
 	//Get Children
@@ -213,3 +213,9 @@ Dispense once, and then copy the rest of the time
 
 ###research DBinfo
 See how dbinfo() gets it's data and if it caches it
+
+###Export/Import
+Allows a list of export/import items
+
+###Find
+Find,FindOne,FindAll

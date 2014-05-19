@@ -5,18 +5,24 @@
  */
 
 component {
-	function init() {
+	
+	function init(){
+		variables.owns = {};
 		return this;
 	}
+
 	public function onMissingMethod(MissingMethodName, MissingMethodArguments){
 		if(Find("import", arguments.MissingMethodName)){
 			//We have to do this because import is a reserved word for ColdFusion
-			this._import(arguments.MissingMethodArguments[1]);
-		}else if(Find("own",arguments.MissingMethodName)){
-			var component = Replace(arguments.MissingMethodName,"own","");
-			var referenceKey = len(trim(arguments.MissingMethodArguments[1])) ? arguments.MissingMethodArguments[1] : "";
-			var referenceColumn = len(trim(arguments.MissingMethodArguments[2])) ? arguments.MissingMethodArguments[2] : "";
-			return own(component,referenceKey,referenceColumn);
+			return this._import(arguments.MissingMethodArguments[1],arguments.MissingMethodArguments[2]);
+		}else if(left(arguments.MissingMethodName,3) == "own"){
+			var ownArguments = {
+				ownComponentName = Replace(arguments.MissingMethodName,"own",""),
+				beanCol = len(trim(arguments.MissingMethodArguments[1])) ? arguments.MissingMethodArguments[1] : "",
+				ownCol = len(trim(arguments.MissingMethodArguments[2])) ? arguments.MissingMethodArguments[2] : "",
+				beans = structKeyExists(arguments.missingMethodArguments,"3") ? arguments.missingMethodArguments[3] : []
+			};
+			return own(argumentCollection=ownArguments);
 		}else{
 			var params = "";
 			for(param in MissingMethodArguments){
@@ -30,63 +36,121 @@ component {
 		this._info.model = new "#modelName#"(this);
 	}
 
-	public function export(keys=arrayNew(1)){
-		var output = {};
-		if(arrayLen(keys)>0){
-			for(key in keys){
-				output[key] = this[key];
-			}
-		}else{
-			for(key in this){
-				if(key != "THIS" && key != "KEY" && !isFunction(key)){
-					if(IsInstanceOf(this[key],"bean") || IsInstanceOf(this[key],"#this._info.componentName#")){
-						output[key] = this[key]._export();
-					}else if(isArray(this[key]) && ( IsInstanceOf(this[key][1],"bean") || IsInstanceOf(this[key],"#this._info.componentName#"))){
-						output[key] = arrayNew(1);
-						for(var i = 1; i <= arrayLen(this[key]); i++){
-							output[key][i] = this[key][i]._export();
-						}
-					}else{
-						output[key] = this[key];
-					}
-				}
-			}
-		}
+	public function export(keys=[]){
+		var output = exportScope(this, keys);
+		structAppend(output, exportScope(variables.owns, keys), false);
 		return output;
 	}
 
-	public function _import(data){
-		for(key in data){
-			this[key] = data[key];
+	private function exportScope(required scope, required array keys){
+		var output = {};
+
+		if(arrayIsEmpty(arguments.keys)){
+			arguments.keys = listToArray(structKeyList(scope));
 		}
+
+		for(var key in arguments.keys){
+			if(NOT structKeyExists(scope, key)){
+				continue;
+			}
+			if(NOT isExportableKey(key)){
+				continue;
+			}
+
+			if(IsInstanceOf(scope[key],"bean")){
+				output[key] = scope[key].export();
+			}
+			else if(isArray(scope[key]) && arrayLen(scope[key]) > 0 && IsInstanceOf(scope[key][1],"bean")){
+				output[key] = arrayNew(1);
+				for(var i = 1; i <= arrayLen(scope[key]); i++){
+					output[key][i] = scope[key][i].export();
+				}
+			}
+			else{
+				output[key] = scope[key];
+			}
+		}
+
+		return output;
 	}
 
-	private function own(componentName,referenceKey="",referenceColumn=""){
-		if(len(trim(referenceKey))){
-			if(len(trim(referenceColumn))){
-				var referenceKeyID = this[arguments.referenceColumn];
-			}else{
-				var referenceKeyID = this[arguments.componentName & arguments.referenceKey];
+	private function isExportableKey(required string key){
+		return 	key != "THIS" && 
+						key != "KEY" && 
+						left(key, 1) != "_" &&
+						!isFunction(key);
+	}
+
+	public function _import(data,keys=[]){
+		if(ArrayLen(keys)>0){
+			for(var key in keys){
+				if(structKeyExists(data,key)){
+					this[key] = data[key];
+				}
 			}
 		}else{
-			referenceKey = this._info.componentName & this._info.primaryKey;
-			var referenceKeyID = this[this._info.primaryKey];
+			for(var key in data){
+				this[key] = data[key];
+			}
 		}
-		if(len(trim(referenceKeyID))){
-			this[arguments.componentName] = this.rb.findAll(arguments.componentName,referenceKey &  " = ?",[referenceKeyID]);
-		}else{
-			this[arguments.componentName] = arrayNew(1);
-		}
-		return this[arguments.componentName];
+		return this;
 	}
 
-	private function isFunction(str) {
+	private function own(ownComponentName,beanCol="",ownCol="", beans){
+		var ownBeans = this._rb.own(this,ownComponentName,beanCol,ownCol,beans);
+		variables.owns[arguments.ownComponentName] = ownBeans;
+		return ownBeans;
+	}
+
+	private boolean function isFunction(str){
 		if(ListFindNoCase(StructKeyList(GetFunctionList()),str)){
-			return 1;
+			return true;
 		}
 		if(IsDefined(str) AND Evaluate("IsCustomFunction(#str#)")){
-			return 1;
+			return true;
 		}
-		return 0;
+		return false;
+	}
+
+	public function setPrimaryKey(required primaryKey){
+		this[getPrimaryKeyName()] = arguments.primaryKey;
+		cascadePrimaryKey();
+	}
+
+	public function getPrimaryKeyValue(){
+		return this[getPrimaryKeyName()];
+	}
+
+	public function getPrimaryKeyName(){
+		return this._info.primaryKey;
+	}
+
+	private function cascadePrimaryKey(){
+		cascadeKey(getPrimaryKeyName(), getPrimaryKeyValue());
+	}
+
+	public function cascadeKey(required string key, required value){
+		for(var ownName in variables.owns){
+			var beans = owns[ownName];
+			for(var bean in beans){
+				bean[key] = value;
+				bean.cascadeKey(key, value);
+			}
+		}
+	}
+
+	public function cascadeSave(){
+		for(var ownName in variables.owns){
+			this._rb.storeAll(variables.owns[ownName]);
+		}
+	}
+	public function isSaved(){
+		var primaryKeyName = getPrimaryKeyName();
+		return isDefined("this.#primaryKeyName#") && len(trim(this[primaryKeyName]));
+	}
+
+	public function null(columnName){
+		structDelete(this, columnName);
+		arrayAppend(this._info.nulledColumns,columnName);
 	}
 }
