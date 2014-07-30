@@ -221,7 +221,7 @@ component {
 
 		var data = arguments.bean.export();
 		for(var columnName in arguments.bean._info.tableColumns){
-			if(structKeyExists(data,"#columnName#") && columnName != primaryKey){
+			if(structKeyExists(data,"#columnName#") && columnName != primaryKey && data[columnName]!=""){
 				if(arguments.bean._info.cache[columnName] != data[columnName]){
 					arguments.bean._info.cache[columnName] = data[columnName];
 					queryService.addParam(name=columnName,value=data[columnName],cfsqltype=getSQLType(arguments.bean._info.tableColumnTypes[columnName]));
@@ -256,9 +256,7 @@ component {
 		for(var i = 1; i <= ListLen(records.columnList); i++){
 			var column = ListGetAt(records.columnList,i);
 			var value = records[column][iterator];
-			if(value!=""){
-				bean[column] = value;
-			}
+			bean[column] = value;
 			bean._info.cache[column] = value;
 		}
 		if(isDefined("bean._info.model") && structKeyExists(bean._info.model,"onPopulate")){
