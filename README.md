@@ -3,14 +3,14 @@ From: https://github.com/Prefinem/RedBeanCF
 
 ##Intro
 
-This is a ORM solution that is based on RedBeanPHP.  It assumes several standards (such as primary key's exist in tables) that are generally adhered to.
+This is a RB solution that is based on RedBeanPHP.  It assumes several standards (such as primary key's exist in tables) that are generally adhered to.
 
 Base requirements for running RedBeanCF
 * Microsoft SQL Datasource
 * ColdFusion 9.0.1
 
 ##Version
-v.0.2
+v.0.3
 
 ##Licensce
 
@@ -18,45 +18,41 @@ Licensed under MIT License
 http://opensource.org/licenses/MIT
 
 ##Basic Usage
-There is a patch of the Interactive Interview that includes the usage of the RedBean for all CRUD operations.  If you would like the patch to test, you can contact William
+Here is some basic usage
 
 ###Setup
-	var ORM = new RedBean();
-	ORM.setup("datsource_name");
+
+	var RB = new rb();
+	RB.setup("datsource_name");
 
 ###Create and Save
-	var user = ORM.dispense('user');
 
+	var user = RB.dispense('user');
 	user.FirstName = 'William';
-
-	var userID = ORM.store(user);
+	RB.store(user);
 
 
 ###Load by ID and Save
-	var user = ORM.load('user','cb323b67-e2a8-4bfd-99d4-848f9b9fddc6');
 
+	var user = RB.load('user','cb323b67-e2a8-4bfd-99d4-848f9b9fddc6');
 	user.FirstName = 'Billiam';
-
-	var userID = ORM.store(user);
+	RB.store(user);
 
 
 ###Load by ID and Delete
-	var user = ORM.load('user','cb323b67-e2a8-4bfd-99d4-848f9b9fddc6');
 
-	ORM.trash(user);
+	var user = RB.load('user','cb323b67-e2a8-4bfd-99d4-848f9b9fddc6');
+	RB.trash(user);
 
 
 ###Find by type
-	var user = ORM.find('user','firstName = ?',['Billiam']);
 
-returns a single bean (first one it finds) or false
+	var user = RB.findOne('user','firstName = ?',['Billiam']);
 
 
 ###Find All by type
-	var users = ORM.findAll('user','firstName = ?',['Billiam']);
 
-return an array of bean.  If no results found, array is empty
-
+	var users = RB.find('user','firstName = ?',['Billiam']);
 
 
 ##RedBean Methods
@@ -66,80 +62,80 @@ Accepts: Datasource String Name, File path for Models (defaults to current direc
 Returns: void
 Examples:
 
-	var ORM = new RedBean();
-	ORM.setup("datsource_name","C:/websites/wwwroot/");
+	var RB = new rb();
+	RB.setup("datsource_name","C:/websites/wwwroot/");
 
 ###dispense
 Accepts: Component Name
 Returns: Empty Bean
 Example:
 
-	var user = ORM.dispense('User');
+	var user = RB.dispense('User');
 
 ###load
 Accepts: Component Name, primaryKeyID
 Returns: Bean
 Example:
 
-	var user = ORM.load('User',1);
+	var user = RB.load('User',1);
 
-###find
+###findOne
 Accepts: Component Name, where clause using params (?), values (array)
 Returns: First Bean
 Example:
 
-	var user = ORM.find('User','firstName = ?',[]);
+	var user = RB.findOne('User','firstName = ?',['William']);
 
-###findAll
+###find
 Accepts: Component Name, where clause using params (?), values (array)
 Returns: Array of Beans
 Example:
 
-	var users = ORM.findAll('User','firstName = ?',[]);
+	var user = RB.find('User','firstName = ?',['William']);
 
 ###store
 Accepts: Bean
-Returns: Primary Key ID of Stored Item
+Returns: void
 Example:
 
-	var userID = ORM.store(user);
+	RB.store(user);
 
 ###storeAll
 Accepts: Array of Beans
 Returns: void
 Example:
 
-	ORM.storeAll(users);
+	RB.storeAll(users);
 
 ###trash
 Accepts: Bean
 Returns: void
 Example:
 
-	ORM.trash(user);
+	RB.trash(user);
 
 ###query
 Accepts: Component Name, Query String, Array of Params
 Returns: Single Bean (first record) of query
 Example:
 
-	user = ORM.query("user","SELECT id,name FROM user ORDER BY name");
-	user = ORM.query("user","SELECT id,name FROM user WHERE name = ?",["Billiam"]);
+	user = RB.query("user","SELECT id,name FROM user ORDER BY name");
+	user = RB.query("user","SELECT id,name FROM user WHERE name = ?",["Billiam"]);
 
 ###queryAll
 Accepts: Bean, Query String, Array of Params
 Returns: All Beans of query
 Example:
 
-	users = ORM.queryAll("user","SELECT id,name FROM user");
-	users = ORM.queryAll("user","SELECT id,name FROM user WHERE name = ?",["Billiam"]);
+	users = RB.queryAll("user","SELECT id,name FROM user");
+	users = RB.queryAll("user","SELECT id,name FROM user WHERE name = ?",["Billiam"]);
 
 ###exportAll
 Accepts: Array of Beans
 Returns: Array of Structs
 Example:
 
-	usersStruct = ORM.exportAll(users);
+	usersStruct = RB.exportAll(users);
 
 ###importAll
 Accepts: Component Name, Array of Data Structures
@@ -149,17 +145,24 @@ Example:
 	var importArray = NewArray(1);
 	importArray[1] = {"firstName":"Billiam","lastName":"Bopper"};
 	importArray[2] = {"firstName":"Ryno","lastName":"Ralley"};
-	var users = ORM.importAll("user",importArray);
+	var users = RB.importAll("user",importArray);
+
+###own
+Accepts: Bean, owned Component Name, bean Column, owned Component Column, owned Beans
+Returns: Array of Beans
+Example:
+
+	var addresses = RB.own(user, 'address', 'id', 'userid');
 
 -----
 
 ##Beans
-Beans are RedBeanCF Objects created by ORM.  They are what RedBean uses for all CRUD operations
+Beans are RedBeanCF Objects created by RB.  They are what RedBean uses for all CRUD operations
 
 ###Models
-To add a model for a Bean, you will need to ensure that a <componentName>Model.cfc file exists in your file path for Models and that it extends RedBeanCF/model.cfc.  While Models are stored in Beans, They have access to the bean data through "this.bean".
+To add a model for a Bean, you will need to ensure that a <componentName>Model.cfc file exists in your file path for Models.  While Models are stored in Beans, They have access to the bean data through "this.bean".
 
-	component displayname="userModel" extends="RedBeanCF.model" {
+	component displayname="userModel" {
 		
 		function getFullName(){
 			return this.bean.firstName & " " & this.bean.lastName;
@@ -169,7 +172,7 @@ To add a model for a Bean, you will need to ensure that a <componentName>Model.c
 ###Data Attributes
 Each Bean stores it's data in the public this scope.
 
-	var user = ORM.dispense("user");
+	var user = RB.dispense("user");
 	user.FirstName = "Billiam";
 	user.LastName = "Bopper";
 	var firstName = user.FirstName;
@@ -188,6 +191,7 @@ Returns: Struct
 Description: Exports the object, and all children objects
 
 ####import
+Accepts: Array of keys to import (not required)
 Description: Imports a struct into the object
 
 ####ownComponentName
@@ -203,19 +207,16 @@ Example:
 	var user = message.ownUser('ID');
 	//This can be used for parent records, or many to many records
 
+####null
+Description: This will null a field and ensure that said value is nulled in the database
+Example:
+
+	user.null('FirstName');
+
 ##TODO
 
 ###Prefetch
 Prefetch data using one SQL Query versus having the n+1 issue we have now.
 
-###findAll
-Dispense once, and then copy the rest of the time
-
 ###research DBinfo
 See how dbinfo() gets it's data and if it caches it
-
-###Export/Import
-Allows a list of export/import items
-
-###Find
-Find,FindOne,FindAll

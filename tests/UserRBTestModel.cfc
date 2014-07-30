@@ -4,7 +4,7 @@
  * License: MIT http://opensource.org/licenses/MIT
  */
 
-component extends="common.CFC.com.RedBeanCF.model" {
+component {
 
 	function getFullName(){
 		return this.bean.firstName & " " & this.bean.lastName;
