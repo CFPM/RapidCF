@@ -118,12 +118,22 @@ component {
 		return allbeans;
 	}
 
-	public function exportAll(required array beans){
-		var exportArray = [];
-		for(var bean in beans){
-			arrayAppend(exportArray,bean.export());
+	public function exportAll(required beans){
+		if(!isArray(arguments.beans)){
+			var output = arguments.beans.export();
+			if(!StructIsEmpty(arguments.beans.owns)){
+				output.owns = {};
+				for(var own in arguments.beans.owns){
+					output.owns[own] = exportAll(arguments.beans.owns[own]);
+				}
+			}
+		}else{
+			var output = [];
+			for(var bean in arguments.beans){
+				arrayAppend(output,exportAll(bean));
+			}
 		}
-		return exportArray;
+		return output;
 	}
 
 	public function importAll(required string componentName, required array dataArray){
@@ -136,7 +146,7 @@ component {
 		return beanArray;
 	}
 
-	public function own(bean, ownComponentName, beanCol="", ownCol="", beans){
+	public function own(bean, ownComponentName, beanCol="", ownCol="", ownBeans=[]){
 		if(len(trim(arguments.beanCol))){
 			var referenceKeyID = bean[arguments.beanCol];
 		}else{
@@ -147,23 +157,31 @@ component {
 			arguments.ownCol = bean._info.componentName & bean.getPrimaryKeyName();
 		}
 
-		if(isObject(arguments.beans)){
-			arguments.beans = [arguments.beans];
+		if(isObject(arguments.ownBeans)){
+			arguments.ownBeans = [arguments.ownBeans];
 		}
 
-		if(NOT arrayIsEmpty(beans)){
-			var ownBeans = arguments.beans;
+		if(NOT arrayIsEmpty(ownBeans)){
+			var returnBeans = arguments.ownBeans;
 		}else if(len(trim(referenceKeyID))){
-			var ownBeans = this.find(arguments.ownComponentName,ownCol &  " = ?",[referenceKeyID]);
+			var returnBeans = this.find(arguments.ownComponentName,ownCol &  " = ?",[referenceKeyID]);
 		}else{
-			var ownBeans = [];
+			var returnBeans = [];
 		}
-		return ownBeans;
+		return returnBeans;
 	}
 
-	/*
-	 * Private functions
-	 */
+	public function ownAll(required array beans, required ownComponentName, beanCol="", ownCol=""){
+		var ownArray = [];
+		for(var bean in beans){
+			arrayAppend(ownArray, own(bean, ownComponentName, beanCol, ownCol));
+		}
+		return ownArray;
+	}
+
+/*
+ * Private functions
+ */
 
 	private function save(required bean){
 		if(bean.isSaved()){
@@ -256,7 +274,7 @@ component {
 		for(var i = 1; i <= ListLen(records.columnList); i++){
 			var column = ListGetAt(records.columnList,i);
 			var value = records[column][iterator];
-			bean[column] = value;
+				bean[column] = value;
 			bean._info.cache[column] = value;
 		}
 		if(isDefined("bean._info.model") && structKeyExists(bean._info.model,"onPopulate")){

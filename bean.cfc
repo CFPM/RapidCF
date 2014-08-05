@@ -7,7 +7,7 @@
 component {
 	
 	function init(){
-		variables.owns = {};
+		this.owns = {};
 		return this;
 	}
 
@@ -41,11 +41,25 @@ component {
 	public function loadModel(modelName){
 		this._info.model = new "#modelName#"();
 		this._info.model.bean = this;
+		if(structKeyExists(this._info.model, "onModelLoad")){
+			this._info.model.onModelLoad();
+		}
 	}
 
 	public function export(keys=[]){
-		var output = exportScope(this, keys);
-		structAppend(output, exportScope(variables.owns, keys), false);
+		var output = {};
+		var scope = arrayIsEmpty(arguments.keys) ? this : arguments.keys;
+		for(var key in scope){
+			if(
+				!isArray(this[key]) &&
+				!isInstanceOf(this[key],"bean") &&
+				!isFunction(key) &&
+				left(key, 1) != "_" &&
+				key != "owns"
+			){
+				output[key] = this[key];
+			}
+		}
 		return output;
 	}
 
@@ -78,7 +92,7 @@ component {
 	}
 
 	public function cascadeKey(required string key, required value){
-		for(var ownName in variables.owns){
+		for(var ownName in this.owns){
 			var beans = owns[ownName];
 			for(var bean in beans){
 				bean[key] = value;
@@ -88,8 +102,8 @@ component {
 	}
 
 	public function cascadeSave(){
-		for(var ownName in variables.owns){
-			this._rb.storeAll(variables.owns[ownName]);
+		for(var ownName in this.owns){
+			this._rb.storeAll(this.owns[ownName]);
 		}
 	}
 
@@ -107,49 +121,17 @@ component {
 	 * Private functions
 	 */
 
-	private function exportScope(required scope, required array keys){
-		var output = {};
-
-		if(arrayIsEmpty(arguments.keys)){
-			arguments.keys = listToArray(structKeyList(scope));
-		}
-
-		for(var key in arguments.keys){
-			if(NOT structKeyExists(scope, key)){
-				continue;
-			}
-			if(NOT isExportableKey(key)){
-				continue;
-			}
-
-			if(IsInstanceOf(scope[key],"bean")){
-				output[key] = scope[key].export();
-			}
-			else if(isArray(scope[key]) && arrayLen(scope[key]) > 0 && IsInstanceOf(scope[key][1],"bean")){
-				output[key] = arrayNew(1);
-				for(var i = 1; i <= arrayLen(scope[key]); i++){
-					output[key][i] = scope[key][i].export();
-				}
-			}
-			else{
-				output[key] = scope[key];
-			}
-		}
-
-		return output;
-	}
-
-	private function isExportableKey(required string key){
-		return 	key != "THIS" && 
-						key != "KEY" && 
-						left(key, 1) != "_" &&
-						!isFunction(key);
-	}
-
 	private function own(ownComponentName,beanCol="",ownCol="", beans){
 		var ownBeans = this._rb.own(this,ownComponentName,beanCol,ownCol,beans);
-		variables.owns[arguments.ownComponentName] = ownBeans;
+		this.owns[arguments.ownComponentName] = ownBeans;
 		return ownBeans;
+	}
+
+	public void function ownBeans(required string ownComponentName, required beans){
+		if(isObject(arguments.beans)){
+			arguments.beans = [arguments.beans];
+		}
+		this.owns[ownComponentName] = arguments.beans;
 	}
 
 	private boolean function isFunction(str){
