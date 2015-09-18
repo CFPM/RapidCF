@@ -24,7 +24,7 @@ component {
             };
             return own(argumentCollection=ownArguments);
         }else{
-            if(isDefined("this._info.model")){
+            if(structKeyExists(this._info, "model")){
                 var params = "";
                 if(arrayLen(MissingMethodArguments)>0){
                     for(i in MissingMethodArguments){
@@ -105,7 +105,7 @@ component {
 
     public function isSaved(){
         var primaryKeyName = getPrimaryKeyName();
-        return isDefined("this.#primaryKeyName#") && len(trim(this[primaryKeyName]));
+        return structKeyExists(this, primaryKeyName) && len(trim(this[primaryKeyName]));
     }
 
     public function null(columnName){
@@ -134,7 +134,7 @@ component {
         if(ListFindNoCase(StructKeyList(GetFunctionList()),str)){
             return true;
         }
-        if(IsDefined(str) AND Evaluate("IsCustomFunction(#str#)")){
+        if(structKeyExists(arguments, "str") AND Evaluate("IsCustomFunction(#str#)")){
             return true;
         }
         return false;

@@ -6,8 +6,8 @@
 
 component {
 
-	function getFullName(){
-		return this.bean.firstName & " " & this.bean.lastName;
-	}
+    function getFullName(){
+        return this.bean.firstName & " " & this.bean.lastName;
+    }
 
 }
