@@ -1,7 +1,7 @@
 {
     "name" : "rb",
     "version" : "master",
-    "main": "rb", //Default to index.cfc
+    "main": "rb",
     "repository" : "https://github.com/Prefinem/RedBeanCF",
 
     "author": "William Giles",
