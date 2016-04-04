@@ -6,6 +6,9 @@
 
 component {
 
+    this.SQL_ESCAPE_LEFT = '[';
+    this.SQL_ESCAPE_RIGHT = ']';
+
     public function init(){
         /* WARNING: changing database schema will require a ColdFusion service restart in the case that we have an RB.cfc as a property of an object in memory.  Since we now
          * only look up the table details the first time an object is requested.
@@ -22,10 +25,14 @@ component {
     public function cacheSchema(){
         var queryService = new query();
         queryService.setDatasource(variables.dataSource);
-        var records = queryService.execute(sql="SELECT TABLE_NAME FROM information_schema.tables;").getResult();
+        if(variables.dataSourceType == 'mysql'){
+            var records = queryService.execute(sql="SHOW TABLES;").getResult();
+        }else{
+            var records = queryService.execute(sql="SELECT TABLE_NAME FROM information_schema.tables;").getResult();
+        }
         var tableInfo = {};
         for(var i = 1; i <= records.recordcount; i++){
-            var table = records.TABLE_NAME[i];
+            var table = records[records.ColumnList[1]][i];
             tableInfo[table] = {};
             tableInfo[table].cache = {};
             tableInfo[table].componentName = table;
@@ -42,8 +49,13 @@ component {
         FileWrite(GetDirectoryFromPath(GetCurrentTemplatePath()) & 'tableInfo-' & variables.dataSource & '.json',serializeJSON(tableInfo));
     }
 
-    public function setup(required string dataSource, string modelMapping = "/"){
+    public function setup(required string dataSource, string modelMapping = "/", string type = 'mssql'){
+        if(type == 'mysql'){
+            this.SQL_ESCAPE_LEFT = '`';
+            this.SQL_ESCAPE_RIGHT = '`';
+        }
         variables.dataSource = arguments.dataSource;
+        variables.dataSourceType = arguments.type;
         variables.modelMapping = arguments.modelMapping;
         variables.modelPath = expandPath(modelMapping);
         variables.modelPathDir = DirectoryList(modelPath,true);
@@ -146,7 +158,7 @@ component {
             var queryService = new query();
             queryService.setDatasource(variables.dataSource);
             queryService.setName(arguments.bean._info.tableName);
-            var results = queryService.execute(sql="DELETE FROM [#arguments.bean._info.tableName#] WHERE [#primaryKey#] = '#primaryKeyValue#'");
+            var results = queryService.execute(sql="DELETE FROM #this.SQL_ESCAPE_LEFT##arguments.bean._info.tableName##this.SQL_ESCAPE_RIGHT# WHERE #this.SQL_ESCAPE_LEFT##primaryKey##this.SQL_ESCAPE_RIGHT# = '#primaryKeyValue#'");
         }
     }
 
@@ -230,6 +242,13 @@ component {
         return ownArray;
     }
 
+    public function exec(required string sql){
+        var queryService = new query();
+        queryService.setDatasource(variables.dataSource);
+        var results = queryService.execute(sql=sql).getResult();
+        return results;
+    }
+
     /*
  * Private functions
  */
@@ -255,26 +274,31 @@ component {
 
         for(var columnName in arguments.bean._info.tableColumns){
             if(structKeyExists(data,"#columnName#") && data[columnName]!=""){
-                columnsList = listAppend(columnsList," [#columnName#] ");
+                columnsList = listAppend(columnsList," #this.SQL_ESCAPE_LEFT##columnName##this.SQL_ESCAPE_RIGHT# ");
                 valuesList = listAppend(valuesList, " :#columnName# ");
                 queryService.addParam(name=columnName,value=data[columnName],cfsqltype=getCFSQLType(arguments.bean._info.tableColumnTypes[columnName]));
             }
         }
         var primaryKey = arguments.bean.getPrimaryKeyName();
 
-        // Trigger Safe Output workaround.  http://stackoverflow.com/questions/13198476/cannot-use-update-with-output-clause-when-a-trigger-is-on-the-table
-        var results = queryService.execute(sql="
-                    DECLARE @inserted table (#primaryKey# varchar(max))
+        if(variables.dataSourceType == 'mysql'){
+            // Trigger Safe Output workaround.  http://stackoverflow.com/questions/13198476/cannot-use-update-with-output-clause-when-a-trigger-is-on-the-table
+            var results = queryService.execute(sql="INSERT #this.SQL_ESCAPE_LEFT##arguments.bean._info.tableName##this.SQL_ESCAPE_RIGHT# (#columnsList#) VALUES (#valuesList#);");
+            var results = queryService.execute(sql="SELECT @#primaryKey#:= LAST_INSERT_ID() as #primaryKey#;");
+        }else{
+            // Trigger Safe Output workaround.  http://stackoverflow.com/questions/13198476/cannot-use-update-with-output-clause-when-a-trigger-is-on-the-table
+            var results = queryService.execute(sql="
+                DECLARE @inserted table (#primaryKey# varchar(max))
 
-                    INSERT [#arguments.bean._info.tableName#] (#columnsList#)
-                    OUTPUT inserted.#primaryKey#
-                    INTO @inserted
-                    VALUES (#valuesList#)
+                INSERT #this.SQL_ESCAPE_LEFT##arguments.bean._info.tableName##this.SQL_ESCAPE_RIGHT# (#columnsList#)
+                OUTPUT inserted.#primaryKey#
+                INTO @inserted
+                VALUES (#valuesList#)
 
-                    SELECT #primaryKey# FROM @inserted
-                ");
+                SELECT #primaryKey# FROM @inserted
+            ");
+        }
         var records = results.getResult();
-
         bean.setPrimaryKey(records[primaryKey][1]);
     }
 
@@ -294,15 +318,15 @@ component {
                 if(arguments.bean._info.cache[columnName] != data[columnName]){
                     arguments.bean._info.cache[columnName] = data[columnName];
                     queryService.addParam(name=columnName,value=data[columnName],cfsqltype=getCFSQLType(arguments.bean._info.tableColumnTypes[columnName]));
-                    updateList = listAppend(updateList," [#columnName#] = :#columnName# ");
+                    updateList = listAppend(updateList," #this.SQL_ESCAPE_LEFT##columnName##this.SQL_ESCAPE_RIGHT# = :#columnName# ");
                 }
             }
         }
         for(var columnName in arguments.bean._data.nulledColumns){
-            updateList = listAppend(updateList," [#columnName#] = NULL ");
+            updateList = listAppend(updateList," #this.SQL_ESCAPE_LEFT##columnName##this.SQL_ESCAPE_RIGHT# = NULL ");
         }
         if(updateList != ""){
-            var results = queryService.execute(sql="UPDATE [#arguments.bean._info.tableName#] SET #updateList# WHERE [#primaryKey#] = '#primaryKeyValue#'");
+            var results = queryService.execute(sql="UPDATE #this.SQL_ESCAPE_LEFT##arguments.bean._info.tableName##this.SQL_ESCAPE_RIGHT# SET #updateList# WHERE #this.SQL_ESCAPE_LEFT##primaryKey##this.SQL_ESCAPE_RIGHT# = '#primaryKeyValue#'");
         }
     }
 
@@ -316,7 +340,7 @@ component {
         for(var value in values){
             queryService.addParam(value=value);
         }
-        var results = queryService.execute(sql="SELECT * FROM [#arguments.bean._info.tableName#] WHERE #arguments.where#");
+        var results = queryService.execute(sql="SELECT * FROM #this.SQL_ESCAPE_LEFT##arguments.bean._info.tableName##this.SQL_ESCAPE_RIGHT# WHERE #arguments.where#");
         return results.getResult();
     }
 
@@ -372,7 +396,9 @@ component {
 
     public function getTableInfo(required string tableName){
         if(NOT structKeyExists(variables.cachedSchema.dbInfo, tableName)){
-            variables.cachedSchema.dbInfo[tableName] = new dbinfo(datasource=variables.dataSource,table=arguments.tableName);
+            //Because Lucee is stupid and uses ACF syntax breaking calls for the script version of dbinfo
+            include "dbinfo.cfm";
+            variables.cachedSchema.dbInfo[tableName] = results;
         }
         return variables.cachedSchema.dbInfo[tableName];
     }
@@ -380,7 +406,7 @@ component {
     private function getPrimaryKey(required string tableName){
         if(NOT structKeyExists(variables.cachedSchema.primaryKey, tableName)){
             var dbschema = getTableInfo(tableName);
-            var columns = dbschema.columns();
+            var columns = dbschema;
             var primaryKey = "";
             for(var i = 1; i <= columns.recordcount; i++){
                 if(columns["IS_PRIMARYKEY"][i]){
@@ -397,7 +423,7 @@ component {
     private function getColumns(required string tableName){
         if(NOT structKeyExists(variables.cachedSchema.columns, tableName)){
             var dbschema = getTableInfo(tableName);
-            var columns = dbschema.columns();
+            var columns = dbschema;
             var columnArray = [];
             for(var i = 1; i <= columns.recordcount; i++){
                 arrayAppend(columnArray,columns["COLUMN_NAME"][i]);
@@ -410,7 +436,7 @@ component {
     private function getColumnTypes(required string tableName){
         if(NOT structKeyExists(variables.cachedSchema.columnTypes, tableName)){
             var dbschema = getTableInfo(tableName);
-            var columns = dbschema.columns();
+            var columns = dbschema;
             var columnTypeStruct = {};
             for(var i = 1; i <= columns.recordcount; i++){
                 columnTypeStruct[columns["COLUMN_NAME"][i]] = columns["TYPE_NAME"][i];

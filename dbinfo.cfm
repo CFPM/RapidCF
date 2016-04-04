@@ -1,0 +1,1 @@
+<cfdbinfo datasource="#variables.dataSource#" name="results" type="columns" table="#arguments.tableName#">
