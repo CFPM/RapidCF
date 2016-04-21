@@ -1,0 +1,12 @@
+{
+    "name" : "rb",
+    "version" : "master",
+    "main": "rb",
+    "repository" : "https://github.com/Prefinem/RedBeanCF",
+
+    "author": "William Giles",
+    "homepage": "https://github.com/Prefinem",
+    "description" : "A Lightweight Coldfusion ORM",
+    "keywords" : "ORM, DAO, CRUD, MSSQL",
+    "license" : "MIT"
+}
