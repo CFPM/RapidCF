@@ -282,7 +282,6 @@ component {
         var primaryKey = arguments.bean.getPrimaryKeyName();
 
         if(variables.dataSourceType == 'mysql'){
-            // Trigger Safe Output workaround.  http://stackoverflow.com/questions/13198476/cannot-use-update-with-output-clause-when-a-trigger-is-on-the-table
             var results = queryService.execute(sql="INSERT #this.SQL_ESCAPE_LEFT##arguments.bean._info.tableName##this.SQL_ESCAPE_RIGHT# (#columnsList#) VALUES (#valuesList#);");
             var results = queryService.execute(sql="SELECT @#primaryKey#:= LAST_INSERT_ID() as #primaryKey#;");
         }else{
