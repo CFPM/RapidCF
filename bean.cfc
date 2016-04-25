@@ -18,8 +18,8 @@ component {
         }else if(left(arguments.MissingMethodName,3) == "own"){
             var ownArguments = {
                 ownComponentName = Replace(arguments.MissingMethodName,"own",""),
-                beanCol = len(trim(arguments.MissingMethodArguments[1])) ? arguments.MissingMethodArguments[1] : "",
-                ownCol = len(trim(arguments.MissingMethodArguments[2])) ? arguments.MissingMethodArguments[2] : "",
+                beanCol = structKeyExists(arguments.missingMethodArguments,"1") && len(trim(arguments.MissingMethodArguments[1])) ? arguments.MissingMethodArguments[1] : "",
+                ownCol = structKeyExists(arguments.missingMethodArguments,"2") && len(trim(arguments.MissingMethodArguments[2])) ? arguments.MissingMethodArguments[2] : "",
                 beans = structKeyExists(arguments.missingMethodArguments,"3") ? arguments.missingMethodArguments[3] : []
             };
             return own(argumentCollection=ownArguments);
