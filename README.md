@@ -6,8 +6,8 @@ From: https://github.com/Prefinem/RapidCF
 This is a ColdFusion ORM that was originally based on RedBeanPHP.  It assumes several standards (such as primary key's exist in tables) that are generally adhered to.
 
 Base requirements for running RapidCF
-* Microsoft SQL Datasource (MySQL under development / testing.  Use at your own risk)
-* ColdFusion 9.0.1
+* Microsoft SQL Server >= 2008 or MySQL >= 5 (Currently under testing.  Use at your own risk)
+* ColdFusion >= 9.0.1 or Lucee >= 4
 
 ##Version
 v.1.1
