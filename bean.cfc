@@ -14,7 +14,9 @@ component {
     public function onMissingMethod(MissingMethodName, MissingMethodArguments){
         if(Find("import", arguments.MissingMethodName)){
             //We have to do this because import is a reserved word for ColdFusion
-            return this._import(arguments.MissingMethodArguments[1],arguments.MissingMethodArguments[2]);
+            var data = structKeyExists(arguments.missingMethodArguments,"1") ? arguments.MissingMethodArguments[1] : {};
+            var cols = structKeyExists(arguments.missingMethodArguments,"2") ? arguments.MissingMethodArguments[2] : [];
+            return this._import(data, cols);
         }else if(left(arguments.MissingMethodName,3) == "own"){
             var ownArguments = {
                 ownComponentName = Replace(arguments.MissingMethodName,"own",""),
