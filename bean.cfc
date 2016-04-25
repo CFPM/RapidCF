@@ -99,7 +99,7 @@ component {
 
     public function cascadeSave(){
         for(var ownName in this.owns){
-            this._rb.storeAll(this.owns[ownName]);
+            this._rapid.storeAll(this.owns[ownName]);
         }
     }
 
@@ -118,7 +118,7 @@ component {
      */
 
     private function own(ownComponentName,beanCol="",ownCol="", beans){
-        var ownBeans = this._rb.own(this,ownComponentName,beanCol,ownCol,beans);
+        var ownBeans = this._rapid.own(this,ownComponentName,beanCol,ownCol,beans);
         this.owns[arguments.ownComponentName] = ownBeans;
         return ownBeans;
     }

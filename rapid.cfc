@@ -104,7 +104,7 @@ component {
         bean._data.nulledColumns = {};
 
         loadModel(bean);
-        bean._rb = this;
+        bean._rapid = this;
 
         return bean;
     }
@@ -112,10 +112,10 @@ component {
     public function load(required string componentName, required any ID){
         var bean = dispense(arguments.componentName);
         var primaryKey = bean.getPrimaryKeyName();
-        return findOne(arguments.componentName,"#primaryKey# = ? ",[id]);
+        return this.find(arguments.componentName,"#primaryKey# = ? ",[id]);
     }
 
-    public function findOne(required string componentName, required string where, required array values){
+    public function find(required string componentName, required string where, required array values){
         var bean = dispense(arguments.componentName);
         var records = whereQuery(bean, where, values);
         if(records.recordcount > 0){
@@ -125,7 +125,7 @@ component {
         }
     }
 
-    public function find(required string componentName, string where="", array values=[]){
+    public function findAll(required string componentName, string where="", array values=[]){
         var bean = dispense(arguments.componentName);
         var records = whereQuery(bean, arguments.where, arguments.values);
         var allbeans = [];
@@ -227,7 +227,7 @@ component {
         if(NOT arrayIsEmpty(ownBeans)){
             var returnBeans = arguments.ownBeans;
         }else if(len(trim(referenceKeyID))){
-            var returnBeans = this.find(arguments.ownComponentName,ownCol &  " = ?",[referenceKeyID]);
+            var returnBeans = this.findAll(arguments.ownComponentName,ownCol &  " = ?",[referenceKeyID]);
         }else{
             var returnBeans = [];
         }
