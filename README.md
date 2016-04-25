@@ -10,7 +10,7 @@ Base requirements for running RapidCF
 * ColdFusion >= 9.0.1 or Lucee >= 4
 
 ##Version
-v.1.1
+v1.1.0
 
 ##Licensce
 
