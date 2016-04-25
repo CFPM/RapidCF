@@ -1,11 +1,11 @@
 {
-    "name" : "rb",
+    "name" : "rapid",
     "version" : "master",
-    "repository" : "https://github.com/Prefinem/RedBeanCF",
+    "repository" : "https://github.com/Prefinem/RapidCF",
 
     "author": "William Giles",
     "homepage": "https://github.com/Prefinem",
     "description" : "A Lightweight Coldfusion ORM",
-    "keywords" : "ORM, DAO, CRUD, MSSQL",
+    "keywords" : "ORM, DAO, CRUD, MSSQL, Rapid, Rapid Development, Rapid Prototyping",
     "license" : "MIT"
 }

@@ -1,5 +1,5 @@
 /*
- * Any changes should be made and pushed to here: https://github.com/Prefinem/RedBeanCF
+ * Any changes should be made and pushed to here: https://github.com/Prefinem/RapidCF
  * Author: William Giles
  * License: MIT http://opensource.org/licenses/MIT
  */
@@ -22,7 +22,7 @@
                 [firstName] [varchar](50) NOT NULL,
                 [lastName] [varchar](50) NOT NULL,
                 [email] [varchar](50) NULL,
-            CONSTRAINT [PK_contacts] PRIMARY KEY CLUSTERED 
+            CONSTRAINT [PK_contacts] PRIMARY KEY CLUSTERED
             (
                 [id] ASC
             )WITH (PAD_INDEX  = OFF, STATISTICS_NORECOMPUTE  = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS  = ON, ALLOW_PAGE_LOCKS  = ON) ON [PRIMARY]
@@ -38,7 +38,7 @@
                 [userID] [int] NOT NULL,
                 [userIDCreator] [int] NOT NULL,
                 [text] [varchar](max) NULL,
-            CONSTRAINT [PK_messages] PRIMARY KEY CLUSTERED 
+            CONSTRAINT [PK_messages] PRIMARY KEY CLUSTERED
             (
                 [id] ASC
             )WITH (PAD_INDEX  = OFF, STATISTICS_NORECOMPUTE  = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS  = ON, ALLOW_PAGE_LOCKS  = ON) ON [PRIMARY]
@@ -47,7 +47,7 @@
     }
 
     function setupORM(){
-        variables.ORM = CreateObject("component","common.CFC.com.RedBeanCF.rb");
+        variables.ORM = CreateObject("component","common.CFC.com.RapidCF.rb");
         variables.ORM.setup(variables.dataSource);
     }
 
@@ -61,19 +61,19 @@
         result = queryService.execute(sql="
             IF object_id('[message]') IS NOT NULL
                 DROP TABLE [message]
-        ");     
+        ");
     }
 
     function startTests(dataSource){
-        
+
         variables.dataSource = arguments.dataSource;
 
         setupORM();
         createTables();
-        
+
         createUsers();
         testUserCreation();
-        
+
         editUsers();
         testUserEdit();
 
@@ -102,7 +102,7 @@
         user1.LastName = "Doe";
         user1.Email = "john.doe@gmail.com";
         variables.ORM.store(user1);
-        
+
         var user2Struct = {
             firstName = "Jane",
             lastName = "Doe",
@@ -129,7 +129,7 @@
         message.UserID = user2.ID;
         message.UserIDCreator = user1.ID;
         variables.ORM.store(message);
-        
+
         var message = variables.ORM.dispense("message");
         message.Text = "How are you?";
         message.UserID = user1.ID;
@@ -158,7 +158,7 @@
         records = result.getResult();
         if(records.recordCount != 1)
             throw "ERROR: Failed to retrieve First User. rb.store() isn't working";
-        
+
     }
 
     function editUsers(){
@@ -166,7 +166,7 @@
         user.Email = "john.doe@yahoo.com";
         variables.ORM.store(user);
     }
-    
+
     function testUserEdit(){
         queryService = new query();
         queryService.setDatasource(variables.dataSource);
@@ -230,7 +230,7 @@
 
     function testFullName(){
         var user = variables.ORM.findOne("user","firstName = ? AND lastName = ?",["John","Doe"]);
-        user.loadModel("common.CFC.com.RedBeanCF.tests.UserRBTestModel");
+        user.loadModel("common.CFC.com.RapidCF.tests.UserRBTestModel");
         if(user.getFullName() != "John Doe")
             throw "ERROR: Model is not working";
     }
