@@ -181,6 +181,12 @@ component {
         return allbeans;
     }
 
+    public function queryRaw(required string queryString, array params = []){
+        var results = queryThis(queryString, params);
+        var records = results.getResult();
+        return records;
+    }
+
     public function exportAll(required beans){
         if(!isArray(arguments.beans)){
             var output = arguments.beans.export();
@@ -217,7 +223,7 @@ component {
         }
 
         if(!len(trim(arguments.ownCol))){
-            arguments.ownCol = bean._info.componentName & bean.getPrimaryKeyName();
+            arguments.ownCol = bean._info.componentName & "_" & bean.getPrimaryKeyName();
         }
 
         if(isObject(arguments.ownBeans)){
@@ -348,7 +354,7 @@ component {
         for(var i = 1; i <= ListLen(records.columnList); i++){
             var column = ListGetAt(records.columnList,i);
             var value = records[column][iterator];
-                bean[column] = value;
+            bean[column] = value;
             bean._info.cache[column] = value;
         }
         if(structKeyExists(bean._info, "model") && structKeyExists(bean._info.model,"onPopulate")){
