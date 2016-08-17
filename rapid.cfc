@@ -32,7 +32,8 @@ component {
         }
         var tableInfo = {};
         for(var i = 1; i <= records.recordcount; i++){
-            var table = records[records.ColumnList[1]][i];
+            var column = ListFirst(records.ColumnList);
+            var table = records[column][i];
             tableInfo[table] = {};
             tableInfo[table].cache = {};
             tableInfo[table].componentName = table;
@@ -256,8 +257,8 @@ component {
     }
 
     /*
- * Private functions
- */
+     * Private functions
+     */
 
     private function save(required bean){
         if(bean.isSaved()){
