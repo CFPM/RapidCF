@@ -291,21 +291,33 @@ component {
         if(variables.dataSourceType == 'mysql'){
             var results = queryService.execute(sql="INSERT #this.SQL_ESCAPE_LEFT##arguments.bean._info.tableName##this.SQL_ESCAPE_RIGHT# (#columnsList#) VALUES (#valuesList#);");
             var results = queryService.execute(sql="SELECT @#primaryKey#:= LAST_INSERT_ID() as #primaryKey#;");
+            var records = results.getResult();
+            bean.setPrimaryKey(records[primaryKey][1]);
         }else{
-            // Trigger Safe Output workaround.  http://stackoverflow.com/questions/13198476/cannot-use-update-with-output-clause-when-a-trigger-is-on-the-table
-            var results = queryService.execute(sql="
-                DECLARE @inserted table (#primaryKey# varchar(max))
+            try{
+                var results = queryService.execute(sql="
+                    INSERT #this.SQL_ESCAPE_LEFT##arguments.bean._info.tableName##this.SQL_ESCAPE_RIGHT# (#columnsList#)
+                    OUTPUT inserted.#primaryKey#
+                    VALUES (#valuesList#);
+                ");
+                var records = results.getResult();
+                bean.setPrimaryKey(records[primaryKey][1]);
+            }catch(any error){
+                // Trigger Safe Output workaround.  http://stackoverflow.com/questions/13198476/cannot-use-update-with-output-clause-when-a-trigger-is-on-the-table
+                var results = queryService.execute(sql="
+                    DECLARE @inserted table (#primaryKey# varchar(max))
 
-                INSERT #this.SQL_ESCAPE_LEFT##arguments.bean._info.tableName##this.SQL_ESCAPE_RIGHT# (#columnsList#)
-                OUTPUT inserted.#primaryKey#
-                INTO @inserted
-                VALUES (#valuesList#)
+                    INSERT #this.SQL_ESCAPE_LEFT##arguments.bean._info.tableName##this.SQL_ESCAPE_RIGHT# (#columnsList#)
+                    OUTPUT inserted.#primaryKey#
+                    INTO @inserted
+                    VALUES (#valuesList#)
 
-                SELECT #primaryKey# FROM @inserted
-            ");
+                    SELECT #primaryKey# FROM @inserted
+                ");
+                var records = results.getResult();
+                bean.setPrimaryKey(records[primaryKey][1]);
+            }
         }
-        var records = results.getResult();
-        bean.setPrimaryKey(records[primaryKey][1]);
     }
 
     private function update(required bean){
