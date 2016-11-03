@@ -1,4 +1,5 @@
 #Rapid Documention
+
 From: https://github.com/Prefinem/RapidCF
 
 ##Intro
@@ -10,6 +11,7 @@ Base requirements for running RapidCF
 * ColdFusion >= 9.0.1 or Lucee >= 4
 
 ##Version
+
 v1.1.0
 
 ##Licensce
@@ -17,7 +19,16 @@ v1.1.0
 Licensed under MIT License
 http://opensource.org/licenses/MIT
 
+##Installation
+
+RapidCF is installed using CFPM or can be downloaded from source
+
+###CFPM
+
+    cfpm add rapid
+
 ##Basic Usage
+
 Here is some basic usage
 
 ###Setup
